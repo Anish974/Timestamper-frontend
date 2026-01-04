@@ -81,7 +81,8 @@ export function ExportPanel({
       if (data?.user) {
         const userId = data.user.id
 
-        const res = await fetch('http://localhost:5000/api/export', {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+        const res = await fetch(`${API_URL}/api/export`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId }),
