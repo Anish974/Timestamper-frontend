@@ -9,6 +9,10 @@ import Home from "./pages/Home";
 import Pricing from "./pages/Pricing";
 import LoginLogout from "./pages/LoginLogout";
 import NotFound from "./pages/NotFound";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import RefundPolicy from "./pages/RefundPolicy";
+import Contact from "./pages/Contact";
 // ...existing code...
 
 const queryClient = new QueryClient();
@@ -25,6 +29,12 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/login" element={<LoginLogout />} />
+          
+          {/* Policy Pages */}
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/refund" element={<RefundPolicy />} />
+          <Route path="/contact" element={<Contact />} />
 
           {/* Protected */}
 // ...existing code...
