@@ -2,9 +2,10 @@ import { useState, ChangeEvent, FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { toast } from 'sonner'
+import { useToast } from '@/hooks/use-toast'
 
 export default function Contact() {
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -24,7 +25,11 @@ export default function Contact() {
     e.preventDefault()
     
     if (!formData.name || !formData.email || !formData.message) {
-      toast.error('Please fill all fields')
+      toast({
+        title: 'Error',
+        description: 'Please fill all fields',
+        variant: 'destructive',
+      })
       return
     }
 
@@ -32,10 +37,17 @@ export default function Contact() {
     try {
       // You can implement email sending here later
       console.log('Form submitted:', formData)
-      toast.success('Thank you! We will get back to you soon.')
+      toast({
+        title: 'Success',
+        description: 'Thank you! We will get back to you soon.',
+      })
       setFormData({ name: '', email: '', message: '' })
     } catch (error) {
-      toast.error('Failed to send message. Please try again.')
+      toast({
+        title: 'Error',
+        description: 'Failed to send message. Please try again.',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
