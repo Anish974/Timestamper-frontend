@@ -129,7 +129,7 @@ export default function Pricing() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: finalPrice * 100, // rupees -> paise
+          amount: finalPrice , 
           currency: 'INR',
           plan: planName,
           userId: user.id,
