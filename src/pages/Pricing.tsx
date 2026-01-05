@@ -118,8 +118,8 @@ export default function Pricing() {
     // Calculate final price with discount
     const finalPrice = getDiscountedPrice(price)
 
-    // If 100% discount (free), directly activate plan
-    if (finalPrice === 0) {
+    // If free or less than ₹1 (Razorpay minimum), directly activate plan
+    if (finalPrice < 1) {
       try {
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
         const res = await fetch(`${API_URL}/api/activate-free-plan`, {
@@ -163,8 +163,10 @@ export default function Pricing() {
       })
 
       const data = await res.json()
+      console.log('🔍 Create order response:', { status: res.status, data })
 
       if (!res.ok) {
+        console.error('❌ Order creation failed:', data)
         throw new Error(data.error || 'Failed to create order')
       }
 
