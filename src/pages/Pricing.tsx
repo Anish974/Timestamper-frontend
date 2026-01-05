@@ -1,9 +1,11 @@
 // src/pages/Pricing.tsx
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { Check } from 'lucide-react'
+import { Check, Ticket } from 'lucide-react'
 import { toast } from 'sonner'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
 declare global {
   interface Window {
@@ -21,6 +23,9 @@ const plans = [
 export default function Pricing() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
+  const [promoCode, setPromoCode] = useState('')
+  const [promoDiscount, setPromoDiscount] = useState<{ [key: string]: number }>({})
+  const [validatingPromo, setValidatingPromo] = useState(false)
 
   // Razorpay script load
   useEffect(() => {
@@ -35,6 +40,43 @@ export default function Pricing() {
     }
   }, [])
 
+  const validatePromoCode = async () => {
+    if (!promoCode.trim()) {
+      toast.error('Enter a promo code')
+      return
+    }
+
+    setValidatingPromo(true)
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+      const res = await fetch(`${API_URL}/api/promo/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode.toUpperCase() }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Invalid promo code')
+      }
+
+      setPromoDiscount({
+        Free: 0,
+        Pro: 10 - (10 * data.discount / 100),
+        Business: 40 - (40 * data.discount / 100),
+        Unlimited: 100 - (100 * data.discount / 100),
+      })
+
+      toast.success(`${data.discount}% discount applied!`)
+    } catch (error: any) {
+      toast.error(error.message || 'Invalid promo code')
+      setPromoDiscount({})
+    } finally {
+      setValidatingPromo(false)
+    }
+  }
+
   const handleSelectPlan = async (planName: string, price: number) => {
     if (!user) {
       toast.error('Please login to select a plan')
@@ -47,6 +89,9 @@ export default function Pricing() {
       return
     }
 
+    // Use discounted price if promo applied
+    const finalPrice = promoDiscount[planName] || price
+
     try {
       // backend server pe call
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
@@ -54,10 +99,11 @@ export default function Pricing() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: price * 100, // rupees -> paise
+          amount: finalPrice * 100, // rupees -> paise
           currency: 'INR',
           plan: planName,
-          userId: user.id, // ✅ backend "userId" read karega
+          userId: user.id,
+          promoCode: promoCode.toUpperCase() || null,
         }),
       })
 
@@ -124,6 +170,31 @@ export default function Pricing() {
           </p>
         </div>
 
+        {/* Promo Code Section */}
+        <div className="mb-12 p-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 backdrop-blur-xl">
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+            <Ticket className="w-5 h-5 text-emerald-400" />
+            <Input
+              type="text"
+              placeholder="Enter promo code"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              className="max-w-xs bg-slate-900/60 border-emerald-500/50 text-white placeholder:text-slate-500"
+              onKeyPress={(e) => e.key === 'Enter' && validatePromoCode()}
+            />
+            <Button
+              onClick={validatePromoCode}
+              disabled={validatingPromo}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:shadow-lg"
+            >
+              {validatingPromo ? 'Validating...' : 'Apply'}
+            </Button>
+          </div>
+          {Object.keys(promoDiscount).length > 0 && (
+            <p className="text-center text-emerald-300 text-sm mt-3">✓ Promo code applied!</p>
+          )}
+        </div>
+
         {!user && (
           <div className="mb-12 p-6 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-center">
             <p className="text-slate-300 mb-4">
@@ -158,8 +229,11 @@ export default function Pricing() {
                 {plan.name}
               </h3>
               <div className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-pink-500 bg-clip-text text-transparent mb-2">
-                {plan.price === 0 ? '₹0' : `₹${plan.price}`}
+                {plan.price === 0 ? '₹0' : promoDiscount[plan.name] ? `₹${promoDiscount[plan.name].toFixed(0)}` : `₹${plan.price}`}
               </div>
+              {promoDiscount[plan.name] && (
+                <p className="text-sm text-emerald-400 line-through mb-2">₹{plan.price}</p>
+              )}
               <p className="text-slate-400 mb-6">{plan.description}</p>
 
               <ul className="space-y-3 mb-8">
