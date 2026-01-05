@@ -77,6 +77,33 @@ export default function Pricing() {
     }
   }
 
+  const verifyPayment = async (orderId: string, paymentId: string, signature: string) => {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+      const res = await fetch(`${API_URL}/api/razorpay/verify-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          paymentId,
+          signature,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Verification failed')
+      }
+
+      toast.success(`${data.plan} plan activated! 🎉`)
+      navigate('/')
+    } catch (e: any) {
+      console.error('Payment verification error:', e)
+      toast.error(e.message || 'Verification failed')
+    }
+  }
+
   const handleSelectPlan = async (planName: string, price: number) => {
     if (!user) {
       toast.error('Please login to select a plan')
@@ -146,18 +173,17 @@ export default function Pricing() {
       // Backend se jo shape aa raha hai:
       // { orderId, key, amount, currency }
       const options = {
-        key: data.key, // ✅ keyId nahi, "key"
+        key: data.key,
         amount: data.amount,
         currency: data.currency,
         name: 'AYUS UNIVERSAL',
         description: `${planName} plan`,
-        order_id: data.orderId, // ✅ orderId
+        order_id: data.orderId,
         prefill: {
           email: user.email,
         },
-        handler: () => {
-          toast.success('Payment successful! Plan will update shortly.')
-          navigate('/')
+        handler: (response: any) => {
+          verifyPayment(data.orderId, response.razorpay_payment_id, response.razorpay_signature)
         },
         theme: {
           color: '#4f46e5',
