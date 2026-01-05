@@ -24,7 +24,7 @@ export default function Pricing() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
   const [promoCode, setPromoCode] = useState('')
-  const [promoDiscount, setPromoDiscount] = useState<{ [key: string]: number }>({})
+  const [discountPercent, setDiscountPercent] = useState(0)
   const [validatingPromo, setValidatingPromo] = useState(false)
 
   // Razorpay script load
@@ -61,20 +61,19 @@ export default function Pricing() {
         throw new Error(data.error || 'Invalid promo code')
       }
 
-      setPromoDiscount({
-        Free: 0,
-        Pro: 10 - (10 * data.discount / 100),
-        Business: 40 - (40 * data.discount / 100),
-        Unlimited: 100 - (100 * data.discount / 100),
-      })
-
+      setDiscountPercent(data.discount)
       toast.success(`${data.discount}% discount applied!`)
     } catch (error: any) {
       toast.error(error.message || 'Invalid promo code')
-      setPromoDiscount({})
+      setDiscountPercent(0)
     } finally {
       setValidatingPromo(false)
     }
+  }
+
+  const getDiscountedPrice = (originalPrice: number) => {
+    if (originalPrice === 0) return 0
+    return originalPrice - (originalPrice * discountPercent / 100)
   }
 
   const verifyPayment = async (orderId: string, paymentId: string, signature: string) => {
@@ -116,8 +115,8 @@ export default function Pricing() {
       return
     }
 
-    // Use discounted price if promo applied
-    const finalPrice = promoDiscount[planName] || price
+    // Calculate final price with discount
+    const finalPrice = getDiscountedPrice(price)
 
     // If 100% discount (free), directly activate plan
     if (finalPrice === 0) {
@@ -150,13 +149,12 @@ export default function Pricing() {
     }
 
     try {
-      // backend server pe call
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
       const res = await fetch(`${API_URL}/api/razorpay/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: finalPrice , 
+          amount: Math.round(finalPrice * 100),
           currency: 'INR',
           plan: planName,
           userId: user.id,
@@ -246,8 +244,8 @@ export default function Pricing() {
               {validatingPromo ? 'Validating...' : 'Apply'}
             </Button>
           </div>
-          {Object.keys(promoDiscount).length > 0 && (
-            <p className="text-center text-emerald-300 text-sm mt-3">✓ Promo code applied!</p>
+          {discountPercent > 0 && (
+            <p className="text-center text-emerald-300 text-sm mt-3">✓ {discountPercent}% discount applied!</p>
           )}
         </div>
 
@@ -285,9 +283,9 @@ export default function Pricing() {
                 {plan.name}
               </h3>
               <div className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-pink-500 bg-clip-text text-transparent mb-2">
-                {plan.price === 0 ? '₹0' : promoDiscount[plan.name] ? `₹${promoDiscount[plan.name].toFixed(0)}` : `₹${plan.price}`}
+                {plan.price === 0 ? '₹0' : `₹${getDiscountedPrice(plan.price).toFixed(0)}`}
               </div>
-              {promoDiscount[plan.name] && (
+              {discountPercent > 0 && plan.price > 0 && (
                 <p className="text-sm text-emerald-400 line-through mb-2">₹{plan.price}</p>
               )}
               <p className="text-slate-400 mb-6">{plan.description}</p>
