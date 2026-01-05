@@ -90,6 +90,16 @@ export default function Header() {
             >
               Pricing
             </Link>
+            <Link
+              to="/contact"
+              className={`text-sm font-medium transition-colors ${
+                isActive('/contact') 
+                  ? 'text-white' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Contact
+            </Link>
           </nav>
 
           {/* ✅ RIGHTMOST: User actions (Desktop) + Mobile button */}
@@ -176,6 +186,17 @@ export default function Header() {
               onClick={() => setMenuOpen(false)}
             >
               Pricing
+            </Link>
+            <Link
+              to="/contact"
+              className={`text-base font-medium py-2 px-2 rounded-lg transition-colors ${
+                isActive('/contact') 
+                  ? 'text-white bg-blue-500/20' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              }`}
+              onClick={() => setMenuOpen(false)}
+            >
+              Contact
             </Link>
           </div>
 

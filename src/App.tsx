@@ -28,6 +28,7 @@ const App = () => (
           {/* Public */}
           <Route path="/" element={<Home />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<LoginLogout />} />
           
           {/* Policy Pages */}
