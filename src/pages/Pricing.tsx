@@ -92,6 +92,36 @@ export default function Pricing() {
     // Use discounted price if promo applied
     const finalPrice = promoDiscount[planName] || price
 
+    // If 100% discount (free), directly activate plan
+    if (finalPrice === 0) {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+        const res = await fetch(`${API_URL}/api/activate-free-plan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            plan: planName,
+            promoCode: promoCode.toUpperCase(),
+          }),
+        })
+
+        const data = await res.json()
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to activate plan')
+        }
+
+        toast.success(`${planName} plan activated! 🎉`)
+        navigate('/')
+        return
+      } catch (e: any) {
+        console.error(e)
+        toast.error(e.message || 'Failed to activate plan')
+        return
+      }
+    }
+
     try {
       // backend server pe call
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
