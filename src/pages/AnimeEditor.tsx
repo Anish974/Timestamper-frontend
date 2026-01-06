@@ -23,7 +23,10 @@ export default function AnimeEditor() {
 
   // ✅ Get API URL from environment, with intelligent fallback
   const getApiUrl = () => {
-    const envUrl = import.meta.env.VITE_API_URL
+    // Prefer new base URL env, fallback to legacy var
+    const envBase = import.meta.env.VITE_API_BASE_URL as string | undefined
+    const legacy = import.meta.env.VITE_API_URL as string | undefined
+    const envUrl = envBase || legacy
     if (envUrl) return envUrl
 
     // If env var not set, detect if we're in production or development

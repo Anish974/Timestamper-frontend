@@ -81,7 +81,7 @@ export function ExportPanel({
       if (data?.user) {
         const userId = data.user.id
 
-        const API_URL = import.meta.env.VITE_API_URL || 'https://timestamper-backend-o44d.onrender.com'
+        const API_URL = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://timestamper-backend-o44d.onrender.com')
         const res = await fetch(`${API_URL}/api/export`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
