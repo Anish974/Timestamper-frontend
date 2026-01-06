@@ -13,6 +13,7 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import RefundPolicy from "./pages/RefundPolicy";
 import Contact from "./pages/Contact";
+import AnimeEditor from "./pages/AnimeEditor";
 // ...existing code...
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/anime-editor" element={<AnimeEditor />} />
           <Route path="/login" element={<LoginLogout />} />
           
           {/* Policy Pages */}

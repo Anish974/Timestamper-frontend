@@ -176,7 +176,7 @@ export default function Pricing() {
         key: data.key,
         amount: data.amount,
         currency: data.currency,
-        name: 'AYUS UNIVERSAL',
+        name: 'AYUS UNIVERSAL',         
         description: `${planName} plan`,
         order_id: data.orderId,
         prefill: {

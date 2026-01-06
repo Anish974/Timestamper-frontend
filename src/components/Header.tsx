@@ -81,6 +81,16 @@ export default function Header() {
               Home
             </Link>
             <Link
+              to="/anime-editor"
+              className={`text-sm font-medium transition-colors ${
+                isActive('/anime-editor') 
+                  ? 'text-white' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Anime Editor
+            </Link>
+            <Link
               to="/pricing"
               className={`text-sm font-medium transition-colors ${
                 isActive('/pricing') 

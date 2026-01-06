@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import WaveSurfer from 'wavesurfer.js'
-import { Music2, Keyboard, HelpCircle } from 'lucide-react'
+import { Music2, Keyboard, HelpCircle, Film } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AudioUpload } from '@/components/timestamper/AudioUpload'
 import { WaveformPlayer } from '@/components/timestamper/WaveformPlayer'
@@ -287,22 +287,32 @@ const Home = () => {
           <p className="text-slate-400 text-lg">
             Flag important moments in your audio with visual precision
           </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (!user) {
-                navigate('/login')
-              } else {
-                setShowShortcuts(true)
-              }
-            }}
-            className="mt-4 text-slate-400 hover:text-slate-200"
-          >
-            <Keyboard className="w-4 h-4 mr-2" />
-            Keyboard shortcuts
-            <kbd className="ml-2 px-1.5 py-0.5 rounded bg-slate-800 text-xs font-mono">?</kbd>
-          </Button>
+          <div className="flex gap-3 flex-wrap justify-center mt-6">
+            <Button
+              onClick={() => navigate('/anime-editor')}
+              className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:shadow-lg"
+              size="sm"
+            >
+              <Film className="w-4 h-4 mr-2" />
+              Anime Editor
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (!user) {
+                  navigate('/login')
+                } else {
+                  setShowShortcuts(true)
+                }
+              }}
+              className="text-slate-400 hover:text-slate-200"
+            >
+              <Keyboard className="w-4 h-4 mr-2" />
+              Keyboard shortcuts
+              <kbd className="ml-2 px-1.5 py-0.5 rounded bg-slate-800 text-xs font-mono">?</kbd>
+            </Button>
+          </div>
         </header>
 
         {/* If not authenticated, show gentle CTA */}

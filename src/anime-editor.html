@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Video Editor Pro</title>
+    <style>
+        /* --- Audio Trim Reference Styling (Pixel-perfect) --- */
+        .trim-region-highlight {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: rgba(42, 157, 143, 0.13);
+            pointer-events: none;
+            z-index: 5;
+            border-left: 2px solid #e76f51;
+            border-right: 2px solid #2a9d8f;
+            transition: background 0.2s;
+        }
+        .handle {
+            position: absolute;
+            top: 0;
+            width: 3px;
+            height: 100%;
+            cursor: ew-resize;
+            z-index: 10;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            transition: box-shadow 0.2s, background 0.2s;
+        }
+        .handle.start {
+            left: 0;
+            background: #e76f51;
+            box-shadow: -4px 0 12px 2px rgba(231, 111, 81, 0.18);
+        }
+        .handle.end {
+            right: 0;
+            background: #2a9d8f;
+            box-shadow: 4px 0 12px 2px rgba(42, 157, 143, 0.18);
+        }
+        .handle .handle-shape {
+            width: 22px;
+            height: 26px;
+            margin-top: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        .handle.start .handle-shape {
+            background: #e76f51;
+            border-radius: 0 6px 6px 0;
+            margin-left: -11px;
+        }
+        .handle.end .handle-shape {
+            background: #2a9d8f;
+            border-radius: 6px 0 0 6px;
+            margin-right: -11px;
+        }
+        .music-controls {
+            display: flex;
+            gap: 12px;
+            margin: 18px 0 0 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn-control {
+            padding: 11px 22px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(42,157,143,0.08);
+        }
+        .btn-control:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px) scale(1.03);
+        }
+        .music-controls > div {
+            font-weight: 600;
+            color: var(--text);
+            padding: 10px 20px;
+            background: var(--bg);
+            border-radius: 6px;
+            font-size: 1em;
+            min-width: 110px;
+            text-align: center;
+        }
+        @media (max-width: 600px) {
+            .music-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .btn-control, .music-controls > div {
+                width: 100%;
+                min-width: unset;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2a9d8f;
+            --primary-dark: #1d7066;
+            --accent: #e76f51;
+            --bg: #f8f9fa;
+            --surface: #ffffff;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --border: #e0e0e0;
+            --success: #27ae60;
+            --danger: #e74c3c;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .section { margin-bottom: 25px; }
+        .section:last-child { margin-bottom: 0; }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon { font-size: 1.5em; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group:last-child { margin-bottom: 0; }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text);
+            font-size: 0.95em;
+        }
+
+        select,
+        input[type="text"],
+        input[type="number"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: white;
+            color: var(--text);
+        }
+
+        select:focus,
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(42, 157, 143, 0.1);
+        }
+
+        .mode-card {
+            padding: 20px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .mode-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .mode-card.selected { border-color: var(--primary); background: rgba(42, 157, 143, 0.05); }
+
+        .anime-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .anime-card {
+            padding: 15px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .anime-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(42, 157, 143, 0.2);
+        }
+        .anime-card.selected {
+            background: rgba(42, 157, 143, 0.1);
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+        .anime-emoji { font-size: 2.5em; margin-bottom: 8px; }
+        .anime-name { font-size: 0.9em; color: var(--text); word-break: break-word; }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, var(--primary) 60%, var(--accent) 100%);
+            color: #fff;
+            flex: 1;
+            min-width: 180px;
+            font-size: 1.08em;
+            font-weight: 700;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(42,157,143,0.15), 0 1.5px 4px rgba(231,111,81,0.10);
+            padding: 16px 32px;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.08);
+            margin: 10px 0 0 0;
+            display: inline-block;
+            transition: background 0.3s, box-shadow 0.3s, transform 0.2s;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(90deg, var(--primary-dark) 60%, var(--accent) 100%);
+            transform: translateY(-3px) scale(1.04);
+            box-shadow: 0 8px 20px rgba(42, 157, 143, 0.25), 0 2px 8px rgba(231,111,81,0.13);
+            filter: brightness(1.08);
+        }
+        .btn-secondary {
+            background: var(--text-light);
+            color: white;
+            min-width: 120px;
+        }
+        .btn-secondary:hover:not(:disabled) { background: var(--text); transform: translateY(-2px); }
+        .btn-success { background: var(--success); color: white; min-width: 120px; }
+        .btn-success:hover:not(:disabled) { background: #229954; transform: translateY(-2px); }
+
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .status-message.show { display: block; }
+        .status-message.success {
+            background: rgba(39, 174, 96, 0.1);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+        .status-message.error {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px 20px;
+        }
+        .loading.show { display: block; }
+
+        .spinner {
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8em; }
+            .anime-grid { grid-template-columns: repeat(2, 1fr); }
+            .button-group { flex-direction: column; }
+            button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🎬 Anime Video Editor Pro</h1>
+        <p>Create epic anime clips synced to your favorite music</p>
+    </div>
+
+    <div class="card">
+        <!-- STEP 1: SELECT MUSIC -->
+        <div class="section">
+            <div class="section-title">
+                <span class="icon">🎵</span>
+                Step 1: Select Music
+            </div>
+            <div class="form-group">
+                <label for="music">Choose your soundtrack:</label>
+                <select id="music" required>
+                    <option value="">-- Select a music track --</option>
+                </select>
+            </div>
+
+            <!-- AUDIO TRIM UI -->
+            <div id="musicTrimSection" style="display:none; margin-top:20px;">
+                <div class="trim-card" style="background: var(--bg); border-radius: 8px; border: 2px solid var(--border); overflow: hidden;">
+                    <!-- TIME LABELS -->
+                    <div class="trim-time-labels" style="display: flex; justify-content: space-between; padding: 12px 15px; background: white; border-bottom: 1px solid var(--border); font-size: 1em; font-weight: 700; color: var(--text);">
+                        <div style="text-align: left; min-width: 48px;"><span id="startTimeLabel">0:00</span></div>
+                        <div style="text-align: center; color: var(--text-light); min-width: 60px;"><span id="fullTimeLabel">0:00</span></div>
+                        <div style="text-align: right; min-width: 48px;"><span id="endTimeLabel">0:30</span></div>
+                    </div>
+                    <!-- WAVEFORM WITH DRAGGABLE HANDLES -->
+                    <div class="trim-waveform" style="position: relative; height: 110px; background: #f8f9fa;">
+                        <canvas id="waveformCanvas" style="display: block; width: 100%; height: 100%; cursor: pointer;"></canvas>
+                        <div id="startHandle" class="handle start"><div class="handle-shape">◄</div></div>
+                        <div id="endHandle" class="handle end"><div class="handle-shape">►</div></div>
+                        <div id="trimRegion" class="trim-region-highlight"></div>
+                    </div>
+                    <!-- DURATION INFO -->
+                    <div class="trim-duration-info" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: white; border-top: 1px solid var(--border); font-size: 0.97em;">
+                        <span id="selectedDuration" style="font-weight: 700; color: var(--primary); font-size: 1.05em;">Selected: 30s</span>
+                    </div>
+                </div>
+                <audio id="musicPlayer" crossorigin="anonymous" style="display: none;"></audio>
+                <div class="music-controls">
+                    <button type="button" class="btn-control" id="playBtn">
+                        <span>▶</span>
+                        <span>Play Trimmed</span>
+                    </button>
+                    <button type="button" class="btn-control" id="stopBtn">
+                        <span>⏹</span>
+                        <span>Stop</span>
+                    </button>
+                    <div>
+                        <span id="currentTimeDisplay">0:00</span> /
+                        <span id="totalTimeDisplay">0:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: SELECT ANIME -->
+        <div class="section">
+            <div class="section-title">
+                <span class="icon">⚔️</span>
+                Step 2: Select Anime
+            </div>
+            <label>Choose which anime to feature:</label>
+            <div class="anime-grid" id="animeGrid"></div>
+        </div>
+
+        <!-- STEP 3: SELECT MODE -->
+        <div class="section">
+            <div class="section-title">
+                <span class="icon">🎬</span>
+                Step 3: Scene Change Mode
+            </div>
+            <label>How should scenes change?</label>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px;" id="modeContainer"></div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="button-group">
+            <label for="outputSize" style="margin-right:10px;font-weight:600;">Output Size:</label>
+            <!-- ✅ NEW - Complete Options -->
+<select id="outputSize" style="margin-right:20px;">
+    <option value="landscape">YouTube (16:9) Landscape</option>
+    <option value="reels">Reels/Shorts (9:16)</option>
+    <option value="square">Square (1:1)</option>
+    <option value="tiktok">TikTok (9:16)</option>
+    <option value="instagram">Instagram (4:5)</option>
+    <option value="original">Original</option>
+</select>
+
+            <button class="btn-secondary" id="resetBtn">🔄 Reset Form</button>
+            <button class="btn-primary" id="downloadBtn" disabled>🎬 Create & Download Video</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p><strong id="processingStatus">Creating your anime video...</strong></p>
+            <small id="processingStep">Processing...</small>
+            <div style="margin-top: 15px; background: white; padding: 10px; border-radius: 6px;">
+                <div style="width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;">
+                    <div id="progressBar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s ease;"></div>
+                </div>
+                <small id="progressText" style="color: var(--text-light); display: block; margin-top: 5px;">Starting...</small>
+            </div>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+        <div id="videoPreview" style="text-align:center;margin-top:30px;"></div>
+    </div>
+</div>
+
+<script>
+    let animeList = [];
+    let musicTracks = {};
+    let selectedMusic = null;
+    let selectedAnime = null;
+    let selectedMode = 'energy';
+    let customTimestamps = null;
+    let startTime = 0;
+    let endTime = 30;
+    let isPlaying = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData();
+        initModeSelection();
+    });
+
+    async function loadData() {
+        try {
+            const musicResponse = await fetch('http://localhost:3000/api/music-list');
+            const musicData = await musicResponse.json();
+
+            if (musicData.success && musicData.music.length > 0) {
+                musicData.music.forEach(track => {
+                    musicTracks[track.id] = {
+                        name: track.displayName,
+                        fileName: track.name,
+                        url: `http://localhost:3000${track.path}`,
+                        duration: null
+                    };
+                });
+
+                const musicSelect = document.getElementById('music');
+                musicSelect.innerHTML = '<option value="">Select Music Track...</option>' +
+                    Object.keys(musicTracks).map(id =>
+                        `<option value="${id}">${musicTracks[id].name}</option>`
+                    ).join('');
+            } else {
+                showStatus('error', '⚠️ No music files found.');
+            }
+
+            const videoResponse = await fetch('http://localhost:3000/api/videos');
+            const videoData = await videoResponse.json();
+
+            if (videoData.animes && videoData.animes.length > 0) {
+                const emojis = ['🎬', '⚔️', '🎭', '👹', '🦸', '💥', '🌟', '🔥', '⚡', '🎯'];
+                animeList = videoData.animes.map((anime, index) => ({
+                    id: anime.id,
+                    name: anime.name,
+                    videoCount: anime.videoCount,
+                    emoji: emojis[index % emojis.length]
+                }));
+                initAnimeGrid();
+            }
+        } catch (err) {
+            console.error('Failed to load data:', err);
+            showStatus('error', '❌ Failed to connect to backend.');
+        }
+    }
+
+    function initAnimeGrid() {
+        const grid = document.getElementById('animeGrid');
+        grid.innerHTML = animeList.map(anime => `
+            <div class="anime-card" data-id="${anime.id}">
+                <div class="anime-emoji">${anime.emoji}</div>
+                <div class="anime-name">${anime.name}</div>
+            </div>
+        `).join('');
+
+        grid.querySelectorAll('.anime-card').forEach(card => {
+            card.addEventListener('click', () => selectAnime(card));
+        });
+    }
+
+    function selectAnime(card) {
+        document.querySelectorAll('.anime-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedAnime = card.dataset.id;
+        checkFormComplete();
+    }
+
+    function initModeSelection() {
+        const container = document.getElementById('modeContainer');
+        const buttonGroup = document.querySelector('.button-group');
+        let tsBtn = document.getElementById('timestampJsonBtn');
+        if (!tsBtn) {
+            tsBtn = document.createElement('button');
+            tsBtn.id = 'timestampJsonBtn';
+            tsBtn.textContent = 'Upload Timestamps JSON';
+            tsBtn.className = 'btn-secondary';
+            tsBtn.style.display = 'none';
+            tsBtn.type = 'button';
+            buttonGroup.appendChild(tsBtn);
+        }
+        let tsInput = document.getElementById('timestampJsonInput');
+        if (!tsInput) {
+            tsInput = document.createElement('input');
+            tsInput.type = 'file';
+            tsInput.accept = '.json';
+            tsInput.style.display = 'none';
+            tsInput.id = 'timestampJsonInput';
+            document.body.appendChild(tsInput);
+        }
+        tsBtn.onclick = () => tsInput.click();
+        tsInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const json = JSON.parse(evt.target.result);
+                    if (Array.isArray(json.timestamps)) {
+                        customTimestamps = json.timestamps;
+                        showStatus('success', `✅ Loaded ${customTimestamps.length} timestamps from JSON!`);
+                    } else {
+                        showStatus('error', '❌ Invalid JSON: missing timestamps array');
+                    }
+                } catch (err) {
+                    showStatus('error', '❌ Invalid JSON file');
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        const modes = [
+            { id: 'manual', emoji: '📝', name: 'Manual Timestamp', desc: 'Upload your own JSON timestamps for scene changes.' },
+            { id: 'energy', emoji: '⚡', name: 'Energy Based', desc: 'Scene changes based on audio energy/loudness.' }
+        ];
+
+        container.innerHTML = modes.map(mode => `
+            <div class="mode-card ${mode.id === 'energy' ? 'selected' : ''}" data-mode="${mode.id}">
+                <div style="font-size: 2em; margin-bottom: 8px;">${mode.emoji}</div>
+                <div style="font-weight: 600; color: var(--primary); margin-bottom: 5px;">${mode.name}</div>
+                <small style="color: var(--text-light); line-height: 1.5;">${mode.desc}</small>
+            </div>
+        `).join('');
+
+        container.querySelectorAll('.mode-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedMode = card.dataset.mode;
+                tsBtn.style.display = selectedMode === 'manual' ? '' : 'none';
+            });
+        });
+
+        tsBtn.style.display = selectedMode === 'manual' ? '' : 'none';
+    }
+
+    // Music selection with trim UI + real duration
+    document.getElementById('music').addEventListener('change', (e) => {
+        selectedMusic = e.target.value;
+        const trimSection = document.getElementById('musicTrimSection');
+        const player = document.getElementById('musicPlayer');
+
+        if (!selectedMusic) {
+            trimSection.style.display = 'none';
+            selectedMusic = null;
+            startTime = 0;
+            endTime = 30;
+            return checkFormComplete();
+        }
+
+        const track = musicTracks[selectedMusic];
+        if (!track) return;
+
+        trimSection.style.display = 'block';
+
+        player.src = track.url;
+        player.currentTime = 0;
+        isPlaying = false;
+
+        player.onloadedmetadata = () => {
+            const duration = (isFinite(player.duration) && player.duration > 0) ? player.duration : 30;
+            track.duration = duration;
+            startTime = 0;
+            endTime = Math.min(30, duration);
+
+            document.getElementById('fullTimeLabel').textContent = formatTime(0);
+            document.getElementById('endTimeLabel').textContent = formatTime(endTime);
+            document.getElementById('totalTimeDisplay').textContent = formatTime(duration);
+
+            drawWaveform();
+            setupDragHandles();
+        };
+
+        player.load();
+        checkFormComplete();
+    });
+
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function drawWaveform() {
+        const canvas = document.getElementById('waveformCanvas');
+        if (!canvas || !selectedMusic) return;
+
+        const track = musicTracks[selectedMusic];
+        if (!track || !track.duration) return;
+
+        const totalDuration = track.duration;
+        const ctx = canvas.getContext('2d');
+        const width = canvas.offsetWidth;
+        const height = canvas.offsetHeight;
+
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx.fillStyle = '#f8f9fa';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.strokeStyle = '#2a9d8f';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < width; i++) {
+            const time = (i / width) * totalDuration;
+            const y = height / 2 + Math.sin(time * 2) * 25 + Math.random() * 8;
+            if (i === 0) ctx.moveTo(i, y);
+            else ctx.lineTo(i, y);
+        }
+        ctx.stroke();
+
+        const startX = (startTime / totalDuration) * width;
+        const endX = (endTime / totalDuration) * width;
+
+        ctx.fillStyle = 'rgba(42, 157, 143, 0.13)';
+        ctx.fillRect(startX, 0, Math.max(0, endX - startX), height);
+
+        updateTrimHandles();
+    }
+
+    function updateTrimHandles() {
+        const canvas = document.getElementById('waveformCanvas');
+        if (!canvas || !selectedMusic) return;
+
+        const width = canvas.offsetWidth;
+        const track = musicTracks[selectedMusic];
+        if (!track || !track.duration) return;
+
+        const totalDuration = track.duration;
+        const startX = (startTime / totalDuration) * width;
+        const endX = (endTime / totalDuration) * width;
+
+        document.getElementById('startHandle').style.left = startX + 'px';
+        document.getElementById('endHandle').style.right = (width - endX) + 'px';
+
+        const trimRegion = document.getElementById('trimRegion');
+        trimRegion.style.left = startX + 'px';
+        trimRegion.style.width = Math.max(0, endX - startX) + 'px';
+
+        document.getElementById('startTimeLabel').textContent = formatTime(startTime);
+        document.getElementById('endTimeLabel').textContent = formatTime(endTime);
+        document.getElementById('selectedDuration').textContent =
+            `Selected: ${formatTime(endTime - startTime)}`;
+    }
+
+    function setupDragHandles() {
+        const startHandle = document.getElementById('startHandle');
+        const endHandle = document.getElementById('endHandle');
+        const canvas = document.getElementById('waveformCanvas');
+
+        function handleMouseDown(isStart) {
+            return (e) => {
+                e.preventDefault();
+
+                function handleMouseMove(e) {
+                    if (!selectedMusic) return;
+                    const track = musicTracks[selectedMusic];
+                    if (!track || !track.duration) return;
+
+                    const totalDuration = track.duration;
+                    const rect = canvas.getBoundingClientRect();
+                    const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+                    const newTime = (x / rect.width) * totalDuration;
+
+                    if (isStart) {
+                        startTime = Math.max(0, Math.min(newTime, endTime - 1));
+                    } else {
+                        endTime = Math.min(totalDuration, Math.max(newTime, startTime + 1));
+                    }
+                    drawWaveform();
+                }
+
+                function handleMouseUp() {
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                }
+
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            };
+        }
+
+        startHandle.onmousedown = handleMouseDown(true);
+        endHandle.onmousedown = handleMouseDown(false);
+    }
+
+    // Play / Stop controls
+    document.getElementById('playBtn').addEventListener('click', () => {
+        const player = document.getElementById('musicPlayer');
+        if (!selectedMusic) return;
+
+        const track = musicTracks[selectedMusic];
+        const totalDuration = track.duration || player.duration || 30;
+
+        if (isPlaying) {
+            player.pause();
+            document.getElementById('playBtn').innerHTML = '<span>▶</span><span>Play Trimmed</span>';
+            isPlaying = false;
+            return;
+        }
+
+        player.currentTime = Math.min(startTime, totalDuration);
+        player.play();
+        document.getElementById('playBtn').innerHTML = '<span>⏸</span><span>Pause</span>';
+        isPlaying = true;
+
+        const interval = setInterval(() => {
+            if (!isPlaying) return clearInterval(interval);
+            if (player.currentTime >= endTime || player.currentTime >= totalDuration) {
+                player.pause();
+                document.getElementById('playBtn').innerHTML = '<span>▶</span><span>Play Trimmed</span>';
+                isPlaying = false;
+                clearInterval(interval);
+            }
+            document.getElementById('currentTimeDisplay').textContent =
+                formatTime(player.currentTime);
+        }, 100);
+    });
+
+    document.getElementById('stopBtn').addEventListener('click', () => {
+        const player = document.getElementById('musicPlayer');
+        player.pause();
+        player.currentTime = startTime;
+        document.getElementById('playBtn').innerHTML = '<span>▶</span><span>Play Trimmed</span>';
+        document.getElementById('currentTimeDisplay').textContent = formatTime(startTime);
+        isPlaying = false;
+    });
+
+    // Download button
+    document.getElementById('downloadBtn').addEventListener('click', async () => {
+        if (!selectedMusic || !selectedAnime) return;
+
+        try {
+            showLoading(true);
+            const track = musicTracks[selectedMusic];
+
+            const outputSize = document.getElementById('outputSize').value;
+
+            const payload = {
+                musicPath: track.fileName,
+                animeSelection: selectedAnime,
+                startTime: startTime,
+                endTime: endTime,
+                clipCount: 10,
+                bpm: 128,
+                mode: selectedMode,
+                outputSize: outputSize,
+                timestampsJson: selectedMode === 'manual' ? customTimestamps : undefined
+            };
+
+            const response = await fetch('http://localhost:3000/api/create-video', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error('Failed to create video');
+
+            const result = await response.json();
+
+            let attempts = 0;
+            const maxAttempts = 60;
+
+            const checkStatus = async () => {
+                attempts++;
+                const statusResponse = await fetch(`http://localhost:3000/api/status/${result.outputFileName}`);
+                const statusData = await statusResponse.json();
+
+                if (statusData.ready) {
+                    showLoading(false);
+                    showStatus('success', '✅ Video created successfully!');
+                    const previewDiv = document.getElementById('videoPreview');
+                    if (previewDiv) {
+                        previewDiv.innerHTML = `
+                            <video controls style="width:100%;max-width:600px;margin-top:20px;border-radius:8px;" src="http://localhost:3000/api/download/${result.outputFileName}"></video>
+                            <br>
+                            <a href="http://localhost:3000/api/download/${result.outputFileName}" download class="btn-primary" style="margin-top:20px;display:inline-block;text-decoration:none;">⬇️ Download Video</a>
+                        `;
+                    }
+                } else if (statusData.status === 'failed') {
+                    showLoading(false);
+                    showStatus('error', `❌ Failed: ${statusData.error}`);
+                } else if (attempts >= maxAttempts) {
+                    showLoading(false);
+                    showStatus('error', '❌ Timeout');
+                } else {
+                    setTimeout(checkStatus, 2000);
+                }
+            };
+
+            setTimeout(checkStatus, 3000);
+            simulateProgress();
+        } catch (err) {
+            showLoading(false);
+            showStatus('error', `❌ Error: ${err.message}`);
+            console.error(err);
+        }
+    });
+
+    function simulateProgress() {
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 35;
+            if (progress >= 100) progress = 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            if (progress === 100) clearInterval(interval);
+        }, 600);
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        selectedMusic = null;
+        selectedAnime = null;
+        document.getElementById('music').value = '';
+        document.querySelectorAll('.anime-card').forEach(c => c.classList.remove('selected'));
+        document.getElementById('downloadBtn').disabled = true;
+        document.getElementById('musicTrimSection').style.display = 'none';
+        startTime = 0;
+        endTime = 30;
+        isPlaying = false;
+    });
+
+    function checkFormComplete() {
+        const btn = document.getElementById('downloadBtn');
+        btn.disabled = !(selectedMusic && selectedAnime);
+    }
+
+    function showLoading(show) {
+        const loading = document.getElementById('loading');
+        if (show) {
+            loading.classList.add('show');
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('progressBar').style.width = '0%';
+        } else {
+            loading.classList.remove('show');
+            document.getElementById('downloadBtn').disabled = false;
+        }
+    }
+
+    function showStatus(type, message) {
+        const msg = document.getElementById('statusMessage');
+        msg.textContent = message;
+        msg.className = `status-message show ${type}`;
+        setTimeout(() => msg.classList.remove('show'), 6000);
+    }
+</script>
+</body>
+</html>
