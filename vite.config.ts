@@ -7,6 +7,13 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      '/api': {
+        target: 'https://timestamper-backend-o44d.onrender.com',
+        changeOrigin: true,
+        rewrite: (path) => path,
+      }
+    }
   },
   plugins: [react()].filter(Boolean),
   resolve: {

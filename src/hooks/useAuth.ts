@@ -98,20 +98,60 @@ export const useAuth = () => {
         if (!userId) throw new Error('Failed to get user ID');
 
         // ✅ FIXED: Fetch complete profile
-        const { data: profile, error: profileError } = await supabaseClient
+        let { data: profile, error: profileError } = await supabaseClient
           .from('users')
-          .select('email, full_name, avatar_url')  // ✅ Only needed fields
+          .select('email, full_name, avatar_url')
           .eq('id', userId)
           .single();
 
-        if (profileError) throw profileError;
+        // ✅ If profile doesn't exist, create it
+        if (profileError && profileError.code === 'PGRST116') {
+          await supabaseClient
+            .from('users')
+            .insert({
+              id: userId,
+              email: data.user?.email || '',
+              full_name: '',
+              avatar_url: null,
+            });
+
+          const { data: newProfile } = await supabaseClient
+            .from('users')
+            .select('email, full_name, avatar_url')
+            .eq('id', userId)
+            .single();
+          profile = newProfile;
+        } else if (profileError) {
+          throw profileError;
+        }
+
+        if (!profile) throw new Error('Failed to fetch profile');
+
+        // ✅ Ensure subscription exists
+        const { data: existingSub } = await supabaseClient
+          .from('user_subscriptions')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+
+        if (!existingSub) {
+          await supabaseClient
+            .from('user_subscriptions')
+            .insert({
+              user_id: userId,
+              plan: 'Free',
+              status: 'active',
+              exports_used: 0,
+              exports_limit: 3,
+            });
+        }
 
         // ✅ FIXED: Map DB fields to frontend
         setUser({
           id: userId,
           email: profile.email,
-          fullName: profile.full_name,     // DB → Frontend
-          avatar_url: profile.avatar_url,  // ✅ Keep DB field name
+          fullName: profile.full_name,
+          avatar_url: profile.avatar_url,
         });
 
         toast.success('Welcome back!');
@@ -153,23 +193,58 @@ export const useAuth = () => {
       if (data.session?.user) {
         const userId = data.session.user.id;
         
-        // ✅ FIXED: Fetch profile with error handling
+        // ✅ FIXED: Fetch profile with better error handling
         const { data: profile, error } = await supabaseClient
           .from('users')
           .select('email, full_name, avatar_url')
           .eq('id', userId)
           .single();
 
-        if (!error && profile) {
+        if (error) {
+          // ✅ If profile doesn't exist but user is authenticated, create it
+          if (error.code === 'PGRST116') {
+            // Profile doesn't exist, create it with default values
+            const { error: insertError } = await supabaseClient
+              .from('users')
+              .insert({
+                id: userId,
+                email: data.session.user.email || '',
+                full_name: '',
+                avatar_url: null,
+              });
+
+            if (!insertError) {
+              // Fetch again after creating
+              const { data: newProfile } = await supabaseClient
+                .from('users')
+                .select('email, full_name, avatar_url')
+                .eq('id', userId)
+                .single();
+
+              if (newProfile) {
+                setUser({
+                  id: userId,
+                  email: newProfile.email,
+                  fullName: newProfile.full_name,
+                  avatar_url: newProfile.avatar_url,
+                });
+              }
+            } else {
+              console.error('Failed to create profile:', insertError);
+              await supabaseClient.auth.signOut();
+            }
+          } else {
+            // Other database error
+            console.error('Profile fetch error:', error);
+            await supabaseClient.auth.signOut();
+          }
+        } else if (profile) {
           setUser({
             id: userId,
             email: profile.email,
             fullName: profile.full_name,
             avatar_url: profile.avatar_url,
           });
-        } else {
-          console.warn('Profile not found, clearing session');
-          await supabaseClient.auth.signOut();
         }
       }
     } catch (err) {

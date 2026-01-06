@@ -53,13 +53,31 @@ export default function AnimeEditor() {
     try {
       console.log('🔍 Loading data from:', API_BASE_URL)
       
-      const musicResponse = await fetch(`${API_BASE_URL}/api/music-list`)
+      // First, test if backend is alive
+      console.log('📡 Testing backend health...')
+      const healthResponse = await fetch(`${API_BASE_URL}/api/health`, {
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      }).catch(err => {
+        console.warn('⚠️ Health check failed (might be spinning up):', err.message)
+        return null
+      })
+      
+      if (healthResponse) {
+        console.log('✅ Backend is responding, status:', healthResponse.status)
+      } else {
+        console.warn('⚠️ Backend might be cold-starting on Render')
+      }
+      
+      const musicResponse = await fetch(`${API_BASE_URL}/api/music-list`, {
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      })
       console.log('🎵 Music response status:', musicResponse.status, musicResponse.statusText)
       
       // ✅ Check if response is OK first
       if (!musicResponse.ok) {
         const errorText = await musicResponse.text()
-        throw new Error(`HTTP ${musicResponse.status}: ${errorText || musicResponse.statusText}`)
+        console.error('❌ Music API error:', errorText.substring(0, 200))
+        throw new Error(`HTTP ${musicResponse.status}: ${errorText.substring(0, 100) || musicResponse.statusText}`)
       }
 
       // ✅ Check content-type before parsing
@@ -67,13 +85,15 @@ export default function AnimeEditor() {
       console.log('📦 Music content-type:', contentType)
       
       if (!contentType?.includes('application/json')) {
-        throw new Error(`Invalid content type: ${contentType}`)
+        const responseText = await musicResponse.text()
+        console.error('❌ Response is not JSON:', responseText.substring(0, 200))
+        throw new Error(`Invalid content type: ${contentType}. Got: ${responseText.substring(0, 100)}`)
       }
 
       const musicData = await musicResponse.json()
       console.log('✅ Music data loaded:', musicData)
 
-      if (musicData.success && musicData.music.length > 0) {
+      if (musicData.success && musicData.music?.length > 0) {
         const tracks: Record<string, any> = {}
         musicData.music.forEach((track: any) => {
           tracks[track.id] = {
@@ -88,19 +108,24 @@ export default function AnimeEditor() {
         showStatus('error', '⚠️ No music files found.')
       }
 
-      const videoResponse = await fetch(`${API_BASE_URL}/api/videos`)
+      const videoResponse = await fetch(`${API_BASE_URL}/api/videos`, {
+        signal: AbortSignal.timeout(10000)
+      })
       console.log('🎬 Video response status:', videoResponse.status)
       
       // ✅ Same checks for videos
       if (!videoResponse.ok) {
         const errorText = await videoResponse.text()
-        throw new Error(`HTTP ${videoResponse.status}: ${errorText || videoResponse.statusText}`)
+        console.error('❌ Video API error:', errorText.substring(0, 200))
+        throw new Error(`HTTP ${videoResponse.status}: ${errorText.substring(0, 100) || videoResponse.statusText}`)
       }
 
       const videoContentType = videoResponse.headers.get('content-type')
       console.log('📦 Video content-type:', videoContentType)
       
       if (!videoContentType?.includes('application/json')) {
+        const responseText = await videoResponse.text()
+        console.error('❌ Video response is not JSON:', responseText.substring(0, 200))
         throw new Error(`Invalid content type for videos: ${videoContentType}`)
       }
 
@@ -120,6 +145,7 @@ export default function AnimeEditor() {
     } catch (err) {
       console.error('❌ Failed to load data:', err)
       const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+      console.error('Full error:', err)
       showStatus('error', `❌ Failed to load: ${errorMsg}`)
     }
   }

@@ -2,6 +2,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install --prefer-offline --no-audit",
+  "env": {
+    "VITE_API_URL": "@vite_api_url"
+  },
   "rewrites": [
     {
       "source": "/(.*)",
