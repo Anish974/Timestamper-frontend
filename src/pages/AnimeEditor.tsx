@@ -96,10 +96,14 @@ export default function AnimeEditor() {
       if (musicData.success && musicData.music?.length > 0) {
         const tracks: Record<string, any> = {}
         musicData.music.forEach((track: any) => {
+          // ✅ Check if path is already a full URL (from Google Drive)
+          const isFullUrl = track.path?.startsWith('http://') || track.path?.startsWith('https://')
+          const trackUrl = isFullUrl ? track.path : `${API_BASE_URL}${track.path}`
+          
           tracks[track.id] = {
             name: track.displayName,
             fileName: track.name,
-            url: `${API_BASE_URL}${track.path}`,
+            url: trackUrl,
             duration: null,
           }
         })
