@@ -28,7 +28,7 @@ export default function AnimeEditor() {
 
   async function loadData() {
     try {
-      const musicResponse = await fetch('http://localhost:3000/api/music-list')
+      const musicResponse = await fetch('/api/music-list')
       const musicData = await musicResponse.json()
 
       if (musicData.success && musicData.music.length > 0) {
@@ -37,7 +37,7 @@ export default function AnimeEditor() {
           tracks[track.id] = {
             name: track.displayName,
             fileName: track.name,
-            url: `http://localhost:3000${track.path}`,
+            url: `/api${track.path}`,
             duration: null,
           }
         })
@@ -46,7 +46,7 @@ export default function AnimeEditor() {
         showStatus('error', '⚠️ No music files found.')
       }
 
-      const videoResponse = await fetch('http://localhost:3000/api/videos')
+      const videoResponse = await fetch('/api/videos')
       const videoData = await videoResponse.json()
 
       if (videoData.animes && videoData.animes.length > 0) {
@@ -210,7 +210,7 @@ export default function AnimeEditor() {
         timestampsJson: selectedMode === 'manual' ? customTimestamps : undefined,
       }
 
-      const response = await fetch('http://localhost:3000/api/create-video', {
+      const response = await fetch('/api/create-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -225,7 +225,7 @@ export default function AnimeEditor() {
 
       const checkStatus = async () => {
         attempts++
-        const statusResponse = await fetch(`http://localhost:3000/api/status/${result.outputFileName}`)
+        const statusResponse = await fetch(`/api/status/${result.outputFileName}`)
         const statusData = await statusResponse.json()
 
         if (statusData.ready) {
@@ -523,11 +523,11 @@ export default function AnimeEditor() {
             <div className="backdrop-blur-xl bg-slate-900/50 border border-slate-700 rounded-2xl p-8 text-center">
               <video
                 controls
-                src={`http://localhost:3000/api/download/${videoPreview}`}
+                src={`/api/download/${videoPreview}`}
                 className="w-full rounded-lg shadow-2xl max-w-2xl mx-auto mb-6"
               />
               <a
-                href={`http://localhost:3000/api/download/${videoPreview}`}
+                href={`/api/download/${videoPreview}`}
                 download
                 className="inline-block px-8 py-3 bg-gradient-to-r from-blue-500 to-pink-500 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition font-semibold"
               >

@@ -48,7 +48,7 @@ export default function Pricing() {
 
     setValidatingPromo(true)
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+      const API_URL = import.meta.env.VITE_API_URL || 'https://timestamper-backend-o44d.onrender.com'
       const res = await fetch(`${API_URL}/api/promo/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -78,7 +78,7 @@ export default function Pricing() {
 
   const verifyPayment = async (orderId: string, paymentId: string, signature: string) => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+      const API_URL = import.meta.env.VITE_API_URL || 'https://timestamper-backend-o44d.onrender.com'
       const res = await fetch(`${API_URL}/api/razorpay/verify-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,7 +121,7 @@ export default function Pricing() {
     // If free or less than ₹1 (Razorpay minimum), directly activate plan
     if (finalPrice < 1) {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+        const API_URL = import.meta.env.VITE_API_URL || 'https://timestamper-backend-o44d.onrender.com'
         const res = await fetch(`${API_URL}/api/activate-free-plan`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -149,7 +149,7 @@ export default function Pricing() {
     }
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+      const API_URL = import.meta.env.VITE_API_URL || 'https://timestamper-backend-o44d.onrender.com'
       const res = await fetch(`${API_URL}/api/razorpay/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
