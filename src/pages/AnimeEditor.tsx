@@ -21,6 +21,29 @@ export default function AnimeEditor() {
   const startHandleRef = useRef<HTMLDivElement>(null)
   const endHandleRef = useRef<HTMLDivElement>(null)
 
+  // ✅ Get API URL from environment, with intelligent fallback
+  const getApiUrl = () => {
+    const envUrl = import.meta.env.VITE_API_URL
+    if (envUrl) return envUrl
+
+    // If env var not set, detect if we're in production or development
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname
+      
+      // Production domains
+      if (hostname.includes('timestamper.site') || hostname.includes('vercel.app')) {
+        return 'https://timestamper-backend-o44d.onrender.com'
+      }
+      
+      // Development
+      return 'http://localhost:3000'
+    }
+
+    return 'http://localhost:3000'
+  }
+
+  const API_BASE_URL = getApiUrl()
+
   // Load initial data
   useEffect(() => {
     loadData()
@@ -28,8 +51,27 @@ export default function AnimeEditor() {
 
   async function loadData() {
     try {
-      const musicResponse = await fetch('/api/music-list')
+      console.log('🔍 Loading data from:', API_BASE_URL)
+      
+      const musicResponse = await fetch(`${API_BASE_URL}/api/music-list`)
+      console.log('🎵 Music response status:', musicResponse.status, musicResponse.statusText)
+      
+      // ✅ Check if response is OK first
+      if (!musicResponse.ok) {
+        const errorText = await musicResponse.text()
+        throw new Error(`HTTP ${musicResponse.status}: ${errorText || musicResponse.statusText}`)
+      }
+
+      // ✅ Check content-type before parsing
+      const contentType = musicResponse.headers.get('content-type')
+      console.log('📦 Music content-type:', contentType)
+      
+      if (!contentType?.includes('application/json')) {
+        throw new Error(`Invalid content type: ${contentType}`)
+      }
+
       const musicData = await musicResponse.json()
+      console.log('✅ Music data loaded:', musicData)
 
       if (musicData.success && musicData.music.length > 0) {
         const tracks: Record<string, any> = {}
@@ -37,7 +79,7 @@ export default function AnimeEditor() {
           tracks[track.id] = {
             name: track.displayName,
             fileName: track.name,
-            url: `/api${track.path}`,
+            url: `${API_BASE_URL}${track.path}`,
             duration: null,
           }
         })
@@ -46,8 +88,24 @@ export default function AnimeEditor() {
         showStatus('error', '⚠️ No music files found.')
       }
 
-      const videoResponse = await fetch('/api/videos')
+      const videoResponse = await fetch(`${API_BASE_URL}/api/videos`)
+      console.log('🎬 Video response status:', videoResponse.status)
+      
+      // ✅ Same checks for videos
+      if (!videoResponse.ok) {
+        const errorText = await videoResponse.text()
+        throw new Error(`HTTP ${videoResponse.status}: ${errorText || videoResponse.statusText}`)
+      }
+
+      const videoContentType = videoResponse.headers.get('content-type')
+      console.log('📦 Video content-type:', videoContentType)
+      
+      if (!videoContentType?.includes('application/json')) {
+        throw new Error(`Invalid content type for videos: ${videoContentType}`)
+      }
+
       const videoData = await videoResponse.json()
+      console.log('✅ Video data loaded:', videoData)
 
       if (videoData.animes && videoData.animes.length > 0) {
         const emojis = ['🎬', '⚔️', '🎭', '👹', '🦸', '💥', '🌟', '🔥', '⚡', '🎯']
@@ -60,8 +118,9 @@ export default function AnimeEditor() {
         setAnimeList(animes)
       }
     } catch (err) {
-      console.error('Failed to load data:', err)
-      showStatus('error', '❌ Failed to connect to backend.')
+      console.error('❌ Failed to load data:', err)
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+      showStatus('error', `❌ Failed to load: ${errorMsg}`)
     }
   }
 
@@ -210,13 +269,21 @@ export default function AnimeEditor() {
         timestampsJson: selectedMode === 'manual' ? customTimestamps : undefined,
       }
 
-      const response = await fetch('/api/create-video', {
+      const response = await fetch(`${API_BASE_URL}/api/create-video`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
 
-      if (!response.ok) throw new Error('Failed to create video')
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`)
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType?.includes('application/json')) {
+        throw new Error(`Invalid content type: ${contentType}`)
+      }
 
       const result = await response.json()
 
@@ -225,7 +292,17 @@ export default function AnimeEditor() {
 
       const checkStatus = async () => {
         attempts++
-        const statusResponse = await fetch(`/api/status/${result.outputFileName}`)
+        const statusResponse = await fetch(`${API_BASE_URL}/api/status/${result.outputFileName}`)
+        
+        if (!statusResponse.ok) {
+          throw new Error(`Status check failed: ${statusResponse.status}`)
+        }
+
+        const statusContentType = statusResponse.headers.get('content-type')
+        if (!statusContentType?.includes('application/json')) {
+          throw new Error(`Invalid status content type: ${statusContentType}`)
+        }
+
         const statusData = await statusResponse.json()
 
         if (statusData.ready) {
@@ -523,11 +600,11 @@ export default function AnimeEditor() {
             <div className="backdrop-blur-xl bg-slate-900/50 border border-slate-700 rounded-2xl p-8 text-center">
               <video
                 controls
-                src={`/api/download/${videoPreview}`}
+                src={`${API_BASE_URL}/api/download/${videoPreview}`}
                 className="w-full rounded-lg shadow-2xl max-w-2xl mx-auto mb-6"
               />
               <a
-                href={`/api/download/${videoPreview}`}
+                href={`${API_BASE_URL}/api/download/${videoPreview}`}
                 download
                 className="inline-block px-8 py-3 bg-gradient-to-r from-blue-500 to-pink-500 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition font-semibold"
               >
