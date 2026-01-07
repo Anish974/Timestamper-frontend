@@ -3,6 +3,11 @@ dist
 dist-ssr
 *.local
 
+# Backend folder (for local testing only)
+anime-backend/
+backend/
+server/
+
 # Environment variables - NEVER commit these!
 .env
 .env.local
