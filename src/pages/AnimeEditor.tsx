@@ -99,9 +99,14 @@ export default function AnimeEditor() {
       if (musicData.success && musicData.music?.length > 0) {
         const tracks: Record<string, any> = {}
         musicData.music.forEach((track: any) => {
-          // ✅ Check if path is already a full URL (from Google Drive)
+          // Prefer direct URL from API to avoid proxy redirects; fallback to proxied path
+          const directUrl = track.url && (track.url.startsWith('http://') || track.url.startsWith('https://'))
           const isFullUrl = track.path?.startsWith('http://') || track.path?.startsWith('https://')
-          const trackUrl = isFullUrl ? track.path : `${API_BASE_URL}${track.path}`
+          const trackUrl = directUrl
+            ? track.url
+            : isFullUrl
+              ? track.path
+              : `${API_BASE_URL}${track.path}`
           
           tracks[track.id] = {
             name: track.displayName,
