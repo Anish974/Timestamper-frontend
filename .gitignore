@@ -7,6 +7,11 @@ dist-ssr
 anime-backend/
 backend/
 server/
+timestamper-backend/
+
+# Video processing artifacts
+temp/
+outputs/
 
 # Environment variables - NEVER commit these!
 .env
