@@ -3,11 +3,11 @@ dist
 dist-ssr
 *.local
 
-# Backend folder (for local testing only)
-anime-backend/
-backend/
-server/
-timestamper-backend/
+# Backend folders (tracked for local testing)
+# backend/
+# server/
+# anime-backend/
+# timestamper-backend/
 
 # Video processing artifacts
 temp/
