@@ -61,8 +61,8 @@ export function TimestampList({
         <div
           key={ts.id}
           className={cn(
-            'glass-card p-4 flex items-center gap-4 transition-all duration-300',
-            'hover:border-primary/50 group animate-slide-up'
+            'glass-card p-4 flex items-center gap-4 transition-all duration-300 transform hover:scale-102',
+            'hover:border-primary/50 hover:shadow-lg group animate-slide-up'
           )}
           style={{ animationDelay: `${index * 50}ms` }}
         >
@@ -114,7 +114,7 @@ export function TimestampList({
                   variant="ghost"
                   size="icon"
                   onClick={() => startEdit(ts)}
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-all duration-300 transform hover:scale-125"
                 >
                   <Edit2 className="w-3 h-3" />
                 </Button>
@@ -128,7 +128,7 @@ export function TimestampList({
               variant="ghost"
               size="icon"
               onClick={() => onAdjust(ts.id, -1)}
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all duration-300 transform hover:scale-125"
             >
               <Minus className="w-3 h-3" />
             </Button>
@@ -137,7 +137,7 @@ export function TimestampList({
               variant="ghost"
               size="icon"
               onClick={() => onAdjust(ts.id, 1)}
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground transition-all duration-300 transform hover:scale-125"
             >
               <Plus className="w-3 h-3" />
             </Button>
@@ -149,7 +149,7 @@ export function TimestampList({
               variant="ghost"
               size="icon"
               onClick={() => onSeek(ts.time)}
-              className="glass-button h-8 w-8"
+              className="glass-button h-8 w-8 transition-all duration-300 transform hover:scale-125 hover:shadow-lg"
             >
               <Play className="w-4 h-4" />
             </Button>
@@ -157,7 +157,7 @@ export function TimestampList({
               variant="ghost"
               size="icon"
               onClick={() => onDelete(ts.id)}
-              className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+              className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-all duration-300 transform hover:scale-125"
             >
               <Trash2 className="w-4 h-4" />
             </Button>

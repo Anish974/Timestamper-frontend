@@ -81,6 +81,16 @@ export default function Header() {
               Home
             </Link>
             <Link
+              to="/timestamper"
+              className={`text-sm font-medium transition-colors ${
+                isActive('/timestamper') 
+                  ? 'text-white' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Timestamper
+            </Link>
+            <Link
               to="/anime-editor"
               className={`text-sm font-medium transition-colors ${
                 isActive('/anime-editor') 
@@ -185,6 +195,28 @@ export default function Header() {
               onClick={() => setMenuOpen(false)}
             >
               Home
+            </Link>
+            <Link
+              to="/timestamper"
+              className={`text-base font-medium py-2 px-2 rounded-lg transition-colors ${
+                isActive('/timestamper') 
+                  ? 'text-white bg-blue-500/20' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              }`}
+              onClick={() => setMenuOpen(false)}
+            >
+              Timestamper
+            </Link>
+            <Link
+              to="/anime-editor"
+              className={`text-base font-medium py-2 px-2 rounded-lg transition-colors ${
+                isActive('/anime-editor') 
+                  ? 'text-white bg-blue-500/20' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              }`}
+              onClick={() => setMenuOpen(false)}
+            >
+              Anime Editor
             </Link>
             <Link
               to="/pricing"

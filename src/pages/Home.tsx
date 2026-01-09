@@ -1,458 +1,391 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
-import WaveSurfer from 'wavesurfer.js'
-import { Music2, Keyboard, HelpCircle, Film } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { AudioUpload } from '@/components/timestamper/AudioUpload'
-import { WaveformPlayer } from '@/components/timestamper/WaveformPlayer'
-import { FlagInput } from '@/components/timestamper/FlagInput'
-import { TimestampList } from '@/components/timestamper/TimestampList'
-import { ExportPanel } from '@/components/timestamper/ExportPanel'
-import { exportTimestamps, getFileExtension, getMimeType } from '@/lib/exportFormats'
-import { KeyboardShortcutsModal } from '@/components/timestamper/KeyboardShortcutsModal'
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
-import { Timestamp } from '@/types/timestamp'
-import { toast } from 'sonner'
-import { supabaseClient } from '@/lib/supabaseClient'
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { Play, Clock, Sparkles, Zap, Music, Video, ArrowRight, Check } from 'lucide-react';
 
-const ALLOWED_AUDIO_TYPES = [
-  'audio/mpeg',
-  'audio/wav',
-  'audio/ogg',
-  'audio/flac',
-  'audio/aac',
-  'audio/m4a',
-]
-const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
-
-const PLAN_LIMITS: Record<string, number | null> = {
-  Free: 3,
-  Pro: 10,
-  Business: 50,
-  Unlimited: null,
-}
-
-const Home = () => {
-  const { user, loading } = useAuth()
-  const navigate = useNavigate()
-
-  // TimeStamper states
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
-  const [fileName, setFileName] = useState('')
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [timestamps, setTimestamps] = useState<Timestamp[]>([])
-  const [isReady, setIsReady] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [showShortcuts, setShowShortcuts] = useState(false)
-  const [exportFormat, setExportFormat] = useState<'txt' | 'csv' | 'json' | 'srt' | 'youtube'>('txt')
-
-  const wavesurferRef = useRef<WaveSurfer | null>(null)
-
-  // Plan + exports info
-  const [planInfo, setPlanInfo] = useState<{
-    plan: string
-    used: number
-    max: number | null
-  } | null>(null)
-
-  // Fetch subscription info when user changes
-  useEffect(() => {
-    const fetchSubscription = async () => {
-      if (!user) {
-        setPlanInfo(null)
-        return
-      }
-
-      const { data, error } = await supabaseClient
-        .from('user_subscriptions')
-        .select('plan, exports_used')
-        .eq('user_id', user.id)
-        .single()
-
-      if (error || !data) {
-        setPlanInfo(null)
-        return
-      }
-
-      const max = PLAN_LIMITS[data.plan] ?? null
-
-      setPlanInfo({
-        plan: data.plan,
-        used: data.exports_used,
-        max,
-      })
-    }
-
-    fetchSubscription()
-  }, [user])
-
-  // Helper: ensure auth + (optionally) plan for actions
-  const requireAuth = useCallback(
-    (opts?: { needPlan?: boolean }) => {
-      if (!user) {
-        toast.error('Please login to use this feature')
-        navigate('/login')
-        return false
-      }
-      if (opts?.needPlan) {
-        if (!planInfo || !planInfo.plan) {
-          toast.error('Please select a plan first')
-          navigate('/pricing')
-          return false
-        }
-      }
-      return true
-    },
-    [user, planInfo, navigate]
-  )
-
-  // Handle file selection (auth + plan required)
-  const handleFileSelect = useCallback(
-    (file: File) => {
-      if (!requireAuth({ needPlan: true })) return
-
-      if (!ALLOWED_AUDIO_TYPES.includes(file.type)) {
-        toast.error('Unsupported audio format. Please upload MP3, WAV, OGG, FLAC, AAC, or M4A.')
-        return
-      }
-
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error('File size exceeds 100MB limit.')
-        return
-      }
-
-      const url = URL.createObjectURL(file)
-      setAudioUrl(url)
-      setFileName(file.name)
-      setTimestamps([])
-      setCurrentTime(0)
-      setDuration(0)
-      setIsReady(false)
-    },
-    [requireAuth]
-  )
-
-  // Handle flag/timestamp creation
-  const handleFlag = useCallback(
-    (label: string) => {
-      if (!requireAuth({ needPlan: true })) return
-      if (!isReady) {
-        toast.error('Audio not ready')
-        return
-      }
-      const newTimestamp: Timestamp = {
-        id: Date.now().toString(),
-        time: currentTime,
-        label,
-        createdAt: new Date(),
-      }
-      setTimestamps((prev) => [...prev, newTimestamp].sort((a, b) => a.time - b.time))
-      toast.success('Timestamp added')
-    },
-    [currentTime, isReady, requireAuth]
-  )
-
-  // Handle seek
-  const handleSeek = useCallback((time: number) => {
-    const ws = wavesurferRef.current
-    if (ws) {
-      ws.seekTo(time / ws.getDuration())
-    }
-  }, [])
-
-  // Handle play/pause
-  const handlePlayPause = useCallback(() => {
-    if (!requireAuth({ needPlan: false })) return
-
-    const ws = wavesurferRef.current
-    if (ws) {
-      if (isPlaying) {
-        ws.pause()
-        setIsPlaying(false)
-      } else {
-        ws.play()
-        setIsPlaying(true)
-      }
-    }
-  }, [isPlaying, requireAuth])
-
-  // Handle delete timestamp
-  const handleDelete = useCallback((id: string) => {
-    setTimestamps((prev) => prev.filter((ts) => ts.id !== id))
-    toast.success('Timestamp deleted')
-  }, [])
-
-  // Handle adjust timestamp
-  const handleAdjust = useCallback(
-    (id: string, seconds: number) => {
-      setTimestamps((prev) =>
-        prev.map((ts) =>
-          ts.id === id
-            ? { ...ts, time: Math.max(0, Math.min(ts.time + seconds, duration)) }
-            : ts
-        )
-      )
-    },
-    [duration]
-  )
-
-  // Handle update label
-  const handleUpdateLabel = useCallback((id: string, label: string) => {
-    setTimestamps((prev) => prev.map((ts) => (ts.id === id ? { ...ts, label } : ts)))
-  }, [])
-
-  // Handle skip forward
-  const handleSkipForward = useCallback(
-    (seconds: number) => {
-      if (!requireAuth()) return
-      const ws = wavesurferRef.current
-      if (ws) {
-        const newTime = Math.min(ws.getCurrentTime() + seconds, ws.getDuration())
-        ws.seekTo(newTime / ws.getDuration())
-      }
-    },
-    [requireAuth]
-  )
-
-  // Handle skip backward
-  const handleSkipBackward = useCallback(
-    (seconds: number) => {
-      if (!requireAuth()) return
-      const ws = wavesurferRef.current
-      if (ws) {
-        const newTime = Math.max(ws.getCurrentTime() - seconds, 0)
-        ws.seekTo(newTime / ws.getDuration())
-      }
-    },
-    [requireAuth]
-  )
-
-  // OLD local export handler is no longer used by shortcut; ExportPanel karega
-  const handleExportDownload = useCallback(() => {
-    if (!requireAuth({ needPlan: true })) return
-
-    if (timestamps.length === 0) {
-      toast.error('No timestamps to export')
-      return
-    }
-    const content = exportTimestamps(timestamps, exportFormat, fileName)
-    const blob = new Blob([content], { type: getMimeType(exportFormat) })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${fileName.replace(/\.[^/.]+$/, '')}_timestamps.${getFileExtension(
-      exportFormat
-    )}`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    toast.success('Timestamps exported!')
-  }, [timestamps, exportFormat, fileName, requireAuth])
-
-  // Keyboard shortcuts
-  useKeyboardShortcuts({
-    onPlayPause: handlePlayPause,
-    onFlag: () => handleFlag('Marker'),
-    onSkipForward: handleSkipForward,
-    onSkipBackward: handleSkipBackward,
-    // Shortcut export abhi bhi local handler use kare; chahe to /api/export se wire kar sakta hai
-    onExport: handleExportDownload,
-    onShowHelp: () => setShowShortcuts(true),
-    enabled: isReady,
-  })
-
+export default function Home() {
   return (
-    <div className="min-h-screen">
-      {/* Background effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl" />
-      </div>
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 px-4">
+        {/* Advanced Animated Background - Login style */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          {/* Main gradient orbs with advanced animations */}
+          <div className="absolute top-1/4 -left-32 w-[500px] h-[500px] bg-gradient-to-br from-purple-500/30 via-pink-500/20 to-purple-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+          <div className="absolute bottom-1/4 -right-32 w-[500px] h-[500px] bg-gradient-to-br from-blue-500/30 via-cyan-500/20 to-blue-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-pink-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+          
+          {/* Floating particles effect */}
+          <div className="absolute top-20 left-20 w-2 h-2 bg-purple-400/40 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
+          <div className="absolute top-40 right-40 w-3 h-3 bg-pink-400/40 rounded-full animate-ping" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+          <div className="absolute bottom-32 left-1/3 w-2 h-2 bg-blue-400/40 rounded-full animate-ping" style={{ animationDuration: '5s', animationDelay: '2s' }} />
+          <div className="absolute bottom-20 right-1/4 w-3 h-3 bg-cyan-400/40 rounded-full animate-ping" style={{ animationDuration: '3.5s', animationDelay: '0.5s' }} />
+          
+          {/* Grid pattern overlay */}
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
+        </div>
 
-      <div className="relative z-10 container max-w-4xl py-8 px-4 mt-24">
-        {/* Header */}
-        <header className="text-center mb-12 animate-fade-in">
-          <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-pink-500 flex items-center justify-center shadow-lg">
-              <Music2 className="w-6 h-6 text-white" />
+        <div className="relative z-10 max-w-6xl mx-auto text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 border border-purple-500/20 rounded-full mb-8 backdrop-blur-xl shadow-lg animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+              <Music className="w-4 h-4 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-              TimeStamper
-            </h1>
+            <span className="text-sm text-purple-300 font-semibold">Manual Timestamping Tool</span>
           </div>
-          <p className="text-slate-400 text-lg">
-            Flag important moments in your audio with visual precision
-          </p>
-          <div className="flex gap-3 flex-wrap justify-center mt-6">
-            <Button
-              onClick={() => navigate('/anime-editor')}
-              className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:shadow-lg"
-              size="sm"
-            >
-              <Film className="w-4 h-4 mr-2" />
-              Anime Editor
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (!user) {
-                  navigate('/login')
-                } else {
-                  setShowShortcuts(true)
-                }
-              }}
-              className="text-slate-400 hover:text-slate-200"
-            >
-              <Keyboard className="w-4 h-4 mr-2" />
-              Keyboard shortcuts
-              <kbd className="ml-2 px-1.5 py-0.5 rounded bg-slate-800 text-xs font-mono">?</kbd>
-            </Button>
-          </div>
-        </header>
 
-        {/* If not authenticated, show gentle CTA */}
-        {!user && !loading && (
-          <div className="mb-8 p-6 rounded-lg bg-blue-500/10 border border-blue-500/30 text-center">
-            <p className="text-slate-300 mb-4">
-              Sign in to upload audio, add timestamps, and export your work.
-            </p>
-            <div className="flex gap-4 justify-center flex-wrap">
-              <Button
-                onClick={() => navigate('/login')}
-                className="bg-gradient-to-r from-blue-500 to-pink-500 hover:shadow-lg"
-              >
-                Sign In / Sign Up
-              </Button>
-              <Button
-                onClick={() => navigate('/pricing')}
-                variant="outline"
-                className="border-slate-600 hover:bg-slate-800"
-              >
-                View Pricing
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Plan badge + exports remaining */}
-        {user && planInfo && (
-          <div className="mb-6 inline-flex flex-col px-4 py-2 bg-gradient-to-r from-blue-500 to-pink-500 text-white rounded-lg text-sm font-semibold">
-            <span>Plan: {planInfo.plan}</span>
-            <span className="text-xs font-normal opacity-90">
-              {planInfo.max === null
-                ? `Exports used: ${planInfo.used} / ∞`
-                : `Exports used: ${planInfo.used} / ${planInfo.max} • remaining ${Math.max(
-                    0,
-                    planInfo.max - planInfo.used
-                  )}`}
+          {/* Main Heading */}
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+              Create Perfect Timestamps
             </span>
+            <br />
+            <span className="text-white">
+              For Your Content
+            </span>
+          </h1>
+
+          {/* Subheading */}
+          <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-8 leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '100ms' }}>
+            Professional timestamp creation tool for podcasts, music, videos, and more.
+          </p>
+          
+          {/* AI Coming Soon Badge */}
+          <div className="relative group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-cyan-500/10 border border-cyan-500/30 rounded-full mb-12 backdrop-blur-xl shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '200ms' }}>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
+            <Sparkles className="relative w-5 h-5 text-cyan-400 animate-pulse" />
+            <span className="relative text-base text-cyan-300 font-semibold">AI-Powered Auto-Detection Coming Soon! 🚀</span>
           </div>
-        )}
 
-        {/* Upload section */}
-        {!audioUrl && (
-          <div className="animate-scale-in">
-            <AudioUpload onFileSelect={handleFileSelect} />
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '300ms' }}>
+            <Link to="/timestamper">
+              <Button className="h-14 px-8 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white text-lg font-semibold rounded-full shadow-lg shadow-purple-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1 group">
+                Get Started Free
+                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link to="/anime-editor">
+              <Button variant="outline" className="h-14 px-8 border-2 border-slate-700 hover:border-purple-500 bg-slate-900/50 backdrop-blur-xl text-white text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105 hover:-translate-y-1 group">
+                Try Anime Editor
+                <Video className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
+              </Button>
+            </Link>
           </div>
-        )}
 
-        {/* Main content when audio is loaded */}
-        {audioUrl && (
-          <div className="space-y-6">
-            {/* Compact upload for replacing */}
-            <div className="animate-fade-in">
-              <AudioUpload onFileSelect={handleFileSelect} currentFile={fileName} />
-            </div>
-
-            {/* Waveform player */}
-            <div className="animate-slide-up" style={{ animationDelay: '100ms' }}>
-              <WaveformPlayer
-                audioUrl={audioUrl}
-                timestamps={timestamps}
-                onTimeUpdate={setCurrentTime}
-                onDurationChange={setDuration}
-                onReady={() => setIsReady(true)}
-                wavesurferRef={wavesurferRef}
-                isPlaying={isPlaying}
-                onPlayPause={handlePlayPause}
-              />
-            </div>
-
-            {/* Flag input */}
-            {isReady && (
-              <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
-                <FlagInput currentTime={currentTime} onFlag={handleFlag} />
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '400ms' }}>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
+              <div className="relative backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border border-white/10 rounded-2xl p-6 hover:border-purple-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                <div className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+                  100%
+                </div>
+                <div className="text-slate-400">Manual Control</div>
               </div>
-            )}
+            </div>
+            <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '500ms' }}>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
+              <div className="relative backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                <div className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-2">
+                  Easy
+                </div>
+                <div className="text-slate-400">Simple Interface</div>
+              </div>
+            </div>
+            <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '600ms' }}>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
+              <div className="relative backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border border-white/10 rounded-2xl p-6 hover:border-pink-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                <div className="text-5xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                  Fast
+                </div>
+                <div className="text-slate-400">Quick Export</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-            {/* Two-column layout for timestamps and export */}
-            <div className="grid md:grid-cols-3 gap-6">
-              <div
-                className="md:col-span-2 animate-slide-up"
-                style={{ animationDelay: '300ms' }}
-              >
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-white">
-                  <span className="text-2xl">📍</span>
-                  Timestamps
-                  {timestamps.length > 0 && (
-                    <span className="text-sm text-slate-400">({timestamps.length})</span>
-                  )}
+      {/* Features Section */}
+      <section className="relative py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16 animate-in fade-in slide-in-from-top-4 duration-700">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Powerful <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">Features</span>
+            </h2>
+            <p className="text-xl text-slate-400">
+              Everything you need to create perfect timestamps
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Feature 1 - Coming Soon */}
+            <div className="relative group opacity-75 animate-in fade-in slide-in-from-bottom-4 duration-700 h-full">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 rounded-2xl blur opacity-10 group-hover:opacity-20 transition-all duration-500" />
+              <div className="relative h-full backdrop-blur-2xl bg-gradient-to-br from-slate-900/60 via-slate-800/60 to-slate-900/60 border border-white/10 rounded-2xl p-8">
+                <div className="absolute top-4 right-4 px-3 py-1 bg-cyan-500/20 border border-cyan-500/50 rounded-full">
+                  <span className="text-xs font-bold text-cyan-400">Coming Soon</span>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500/50 to-pink-500/50 rounded-2xl flex items-center justify-center mb-6">
+                  <Clock className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">AI Smart Detection</h3>
+                <p className="text-slate-400 leading-relaxed">
+                  AI-powered audio analysis will automatically detect beats, silences, and energy changes to create perfect timestamps.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-700 h-full" style={{ animationDelay: '100ms' }}>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
+              <div className="relative h-full backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border border-white/10 rounded-2xl p-8 hover:border-blue-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-500/20">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Music className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Manual Timestamps</h3>
+                <p className="text-slate-400 leading-relaxed">
+                  Add, edit, and organize timestamps manually with our intuitive interface. Full control over every detail.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-700 h-full" style={{ animationDelay: '200ms' }}>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
+              <div className="relative h-full backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border border-white/10 rounded-2xl p-8 hover:border-pink-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-2xl hover:shadow-pink-500/20">
+                <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Zap className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Multiple Formats</h3>
+                <p className="text-slate-400 leading-relaxed">
+                  Export to YouTube, podcast chapters, SRT subtitles, or custom formats. Works with any platform.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-700 h-full" style={{ animationDelay: '300ms' }}>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
+              <div className="relative h-full backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border border-white/10 rounded-2xl p-8 hover:border-cyan-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Video className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Anime Video Editor</h3>
+                <p className="text-slate-400 leading-relaxed">
+                  Create anime music videos synced to your timestamps. Export timestamps from Timestamper and use them in Anime Editor for beat-perfect scene changes.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 5 */}
+            <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-700 h-full" style={{ animationDelay: '400ms' }}>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
+              <div className="relative h-full backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border border-white/10 rounded-2xl p-8 hover:border-purple-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-2xl hover:shadow-purple-500/20">
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Custom Labels</h3>
+                <p className="text-slate-400 leading-relaxed">
+                  Add custom labels, descriptions, and metadata to your timestamps. Organize content your way.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 6 */}
+            <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-700 h-full" style={{ animationDelay: '500ms' }}>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
+              <div className="relative h-full backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border border-white/10 rounded-2xl p-8 hover:border-pink-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-2xl hover:shadow-pink-500/20">
+                <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Play className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Instant Preview</h3>
+                <p className="text-slate-400 leading-relaxed">
+                  Real-time preview of your timestamps. Play, pause, and jump to any point instantly.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20 px-4 relative">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              How It Works
+            </h2>
+            <p className="text-xl text-slate-400">
+              Two powerful tools working together
+            </p>
+          </div>
+
+          {/* Timestamper Process */}
+          <div className="mb-16">
+            <h3 className="text-2xl font-bold text-white mb-8 text-center">
+              <span className="text-blue-400">Timestamper</span> - Create Perfect Timestamps
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+              <div className="hidden md:block absolute top-10 left-0 right-0 h-1 -z-0">
+                <div className="max-w-4xl mx-auto h-full bg-gradient-to-r from-blue-500/30 via-cyan-500/40 to-blue-500/30 rounded-full"></div>
+              </div>
+
+              <div className="relative text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/50 relative z-10 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-blue-500/70 cursor-pointer">
+                  <span className="text-2xl font-bold text-white">1</span>
+                </div>
+                <h4 className="text-lg font-bold text-white mb-2">Upload Audio</h4>
+                <p className="text-sm text-slate-400">
+                  Upload your music file
+                </p>
+              </div>
+
+              <div className="relative text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-cyan-500/50 relative z-10 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-cyan-500/70 cursor-pointer">
+                  <span className="text-2xl font-bold text-white">2</span>
+                </div>
+                <h4 className="text-lg font-bold text-white mb-2">Add Timestamps</h4>
+                <p className="text-sm text-slate-400">
+                  Create timestamps manually
+                </p>
+                <p className="text-xs text-cyan-400 font-semibold mt-2">
+                  Automatic: Coming Soon
+                </p>
+              </div>
+
+              <div className="relative text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/50 relative z-10 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-blue-500/70 cursor-pointer">
+                  <span className="text-2xl font-bold text-white">3</span>
+                </div>
+                <h4 className="text-lg font-bold text-white mb-2">Export JSON</h4>
+                <p className="text-sm text-slate-400">
+                  Download timestamps as JSON file
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Anime Editor Process */}
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-8 text-center">
+              <span className="text-pink-400">Anime Editor</span> - Create Synced Videos
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
+              <div className="hidden md:block absolute top-10 left-0 right-0 h-1 -z-0">
+                <div className="max-w-5xl mx-auto h-full bg-gradient-to-r from-pink-500/30 via-purple-500/40 to-pink-500/30 rounded-full"></div>
+              </div>
+
+              <div className="relative text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-pink-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-pink-500/50 relative z-10 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-pink-500/70 cursor-pointer">
+                  <span className="text-2xl font-bold text-white">1</span>
+                </div>
+                <h4 className="text-lg font-bold text-white mb-2">Select Music</h4>
+                <p className="text-sm text-slate-400">
+                  Upload your music track
+                </p>
+              </div>
+
+              <div className="relative text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/50 relative z-10 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-purple-500/70 cursor-pointer">
+                  <span className="text-2xl font-bold text-white">2</span>
+                </div>
+                <h4 className="text-lg font-bold text-white mb-2">Choose Anime</h4>
+                <p className="text-sm text-slate-400">
+                  Select anime clips folder
+                </p>
+              </div>
+
+              <div className="relative text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-pink-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-pink-500/50 relative z-10 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-pink-500/70 cursor-pointer">
+                  <span className="text-2xl font-bold text-white">3</span>
+                </div>
+                <h4 className="text-lg font-bold text-white mb-2">Upload JSON</h4>
+                <p className="text-sm text-slate-400">
+                  Import timestamps from Timestamper
+                </p>
+              </div>
+
+              <div className="relative text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/50 relative z-10 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-purple-500/70 cursor-pointer">
+                  <span className="text-2xl font-bold text-white">4</span>
+                </div>
+                <h4 className="text-lg font-bold text-white mb-2">Create Video</h4>
+                <p className="text-sm text-slate-400">
+                  Generate synced anime music video
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Integration Note */}
+          <div className="mt-12 backdrop-blur-xl bg-gradient-to-r from-blue-900/30 to-pink-900/30 border border-blue-500/20 rounded-2xl p-6 text-center">
+            <p className="text-slate-300 leading-relaxed">
+              <span className="text-blue-400 font-semibold">Pro Tip:</span> Create timestamps in <span className="text-blue-400 font-semibold">Timestamper</span>, export as JSON, then upload to <span className="text-pink-400 font-semibold">Anime Editor</span> for perfectly synced scene changes at every timestamp!
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="relative py-20 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-all duration-500" />
+            
+            <div className="relative backdrop-blur-2xl bg-gradient-to-br from-purple-900/80 via-pink-900/60 to-purple-900/80 border border-purple-500/30 rounded-3xl p-12 overflow-hidden shadow-2xl">
+              <div className="absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-purple-500/10 blur-3xl" />
+              
+              <div className="relative z-10">
+                <h2 className="text-4xl md:text-5xl font-bold mb-6">
+                  <span className="bg-gradient-to-r from-white via-purple-200 to-white bg-clip-text text-transparent">
+                    Ready to Get Started?
+                  </span>
                 </h2>
-                <TimestampList
-                  timestamps={timestamps}
-                  onSeek={handleSeek}
-                  onDelete={handleDelete}
-                  onAdjust={handleAdjust}
-                  onUpdateLabel={handleUpdateLabel}
-                />
-              </div>
+                <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+                  Join thousands of creators who trust TimeStamper for their content
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+                  <Link to="/timestamper">
+                    <Button className="h-14 px-8 bg-white text-purple-600 hover:bg-slate-100 text-lg font-semibold rounded-full shadow-lg shadow-purple-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                      Start Free Trial
+                    </Button>
+                  </Link>
+                  <Link to="/pricing">
+                    <Button variant="outline" className="h-14 px-8 border-2 border-white/30 hover:border-white text-white bg-white/5 backdrop-blur-xl text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                      View Pricing
+                    </Button>
+                  </Link>
+                </div>
 
-              <div className="animate-slide-up" style={{ animationDelay: '400ms' }}>
-                <ExportPanel
-                  timestamps={timestamps}
-                  fileName={fileName}
-                  selectedFormat={exportFormat}
-                  setSelectedFormat={setExportFormat}
-                  planInfo={planInfo}
-                  onExportCountUpdated={(info) =>
-                    setPlanInfo((prev) =>
-                      prev
-                        ? { ...prev, used: info.used, max: info.max, plan: info.plan }
-                        : info
-                    )
-                  }
-                />
+                <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                    <span>No credit card required</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                    <span>Free forever plan</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                    <span>Cancel anytime</span>
+                  </div>
+                </div>
               </div>
+              
+              <div className="absolute bottom-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-pink-400 to-transparent opacity-50" />
             </div>
           </div>
-        )}
-
-        {/* Help button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => {
-            if (!user) {
-              navigate('/login')
-            } else {
-              setShowShortcuts(true)
-            }
-          }}
-          className="fixed bottom-6 right-6 bg-slate-800/50 backdrop-blur h-12 w-12 rounded-full hover:bg-slate-700/50"
-        >
-          <HelpCircle className="w-5 h-5" />
-        </Button>
-
-        {/* Keyboard shortcuts modal */}
-        <KeyboardShortcutsModal open={showShortcuts} onOpenChange={setShowShortcuts} />
-      </div>
+        </div>
+      </section>
     </div>
-  )
+  );
 }
-
-export default Home

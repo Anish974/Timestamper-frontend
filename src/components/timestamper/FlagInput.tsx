@@ -59,7 +59,7 @@ export function FlagInput({ currentTime, onFlag }: FlagInputProps) {
         <Button
           onClick={handleFlag}
           className={cn(
-            'px-6 transition-all duration-300',
+            'px-6 transition-all duration-300 transform hover:scale-105 hover:shadow-lg',
             'bg-gradient-to-r from-primary to-accent hover:opacity-90',
             'glow-effect'
           )}
@@ -77,7 +77,7 @@ export function FlagInput({ currentTime, onFlag }: FlagInputProps) {
               variant="outline"
               size="sm"
               onClick={() => handlePresetClick(preset)}
-              className="glass-button text-xs"
+              className="glass-button text-xs transition-all duration-300 transform hover:scale-110 hover:shadow-lg"
             >
               {preset}
             </Button>

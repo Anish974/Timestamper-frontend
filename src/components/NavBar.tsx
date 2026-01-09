@@ -20,8 +20,8 @@ export default function NavBar() {
         <Link
           key={link.to}
           to={link.to}
-          className={`text-lg font-semibold px-3 py-1 rounded hover:bg-blue-100/80 transition-colors ${
-            location.pathname === link.to ? 'bg-blue-300/80 text-blue-900 shadow' : 'text-gray-800'
+          className={`text-lg font-semibold px-3 py-1 rounded transition-all duration-300 transform hover:scale-110 hover:bg-blue-100/80 hover:shadow-lg ${
+            location.pathname === link.to ? 'bg-blue-300/80 text-blue-900 shadow-lg scale-105' : 'text-gray-800'
           }`}
         >
           {link.label}

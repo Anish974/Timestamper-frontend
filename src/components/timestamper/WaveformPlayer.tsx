@@ -157,19 +157,23 @@ export function WaveformPlayer({
   };
 
   return (
-    <div className="glass-card p-6 space-y-4">
-      {/* Waveform */}
-      <div className="relative">
-        {!isReady && (
-          <div className="absolute inset-0 flex items-center justify-center bg-card/80 rounded-lg z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+    <div className="relative group">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 via-blue-500 to-pink-500 rounded-3xl blur opacity-20 group-hover:opacity-30 transition-all duration-500" />
+      <div className="relative backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl">
+        <div className="absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent" />
+        
+        {/* Waveform */}
+        <div className="relative">
+          {!isReady && (
+            <div className="absolute inset-0 flex items-center justify-center backdrop-blur-xl bg-slate-900/80 rounded-lg z-10 border border-slate-700/50">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
             </div>
-          </div>
-        )}
-        <div ref={containerRef} className="rounded-lg overflow-hidden" />
+          )}
+          <div ref={containerRef} className="rounded-lg overflow-hidden border border-slate-700/30" />
 
         {/* Timestamp markers */}
         {duration > 0 && (
@@ -188,9 +192,9 @@ export function WaveformPlayer({
       </div>
 
       {/* Time display */}
-      <div className="flex justify-between items-center text-sm">
-        <span className="timestamp-mono text-foreground">{formatTime(currentTime)}</span>
-        <span className="timestamp-mono text-muted-foreground">{formatTime(duration)}</span>
+      <div className="flex justify-between items-center text-sm backdrop-blur-xl bg-slate-800/30 px-4 py-2 rounded-full border border-slate-700/50">
+        <span className="font-mono text-blue-400 font-semibold">{formatTime(currentTime)}</span>
+        <span className="font-mono text-slate-400">{formatTime(duration)}</span>
       </div>
 
       {/* Controls */}
@@ -200,31 +204,35 @@ export function WaveformPlayer({
             variant="ghost"
             size="icon"
             onClick={() => skip(-5)}
-            className="glass-button h-10 w-10"
+            className="h-10 w-10 backdrop-blur-xl bg-slate-800/50 border border-slate-700/50 hover:border-blue-500/30 hover:bg-slate-800/70 text-slate-300 hover:text-blue-400 transition-all duration-300 transform hover:scale-110 rounded-full"
           >
             <SkipBack className="w-5 h-5" />
           </Button>
 
-          <Button
-            onClick={handlePlayPause}
-            className={cn(
-              'h-14 w-14 rounded-full transition-all duration-300',
-              'bg-gradient-to-br from-primary to-accent hover:opacity-90',
-              isPlaying && 'glow-effect'
-            )}
-          >
-            {isPlaying ? (
-              <Pause className="w-6 h-6 text-primary-foreground" />
-            ) : (
-              <Play className="w-6 h-6 text-primary-foreground ml-1" />
-            )}
-          </Button>
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-pink-500 to-purple-500 rounded-full blur opacity-40 group-hover:opacity-70 transition-all duration-300" />
+            <Button
+              onClick={handlePlayPause}
+              className={cn(
+                'relative h-14 w-14 rounded-full transition-all duration-300 transform hover:scale-110',
+                'bg-gradient-to-br from-blue-500 to-pink-500 hover:from-blue-600 hover:to-pink-600',
+                'shadow-xl',
+                isPlaying && 'shadow-blue-500/50'
+              )}
+            >
+              {isPlaying ? (
+                <Pause className="w-6 h-6 text-white" />
+              ) : (
+                <Play className="w-6 h-6 text-white ml-1" />
+              )}
+            </Button>
+          </div>
 
           <Button
             variant="ghost"
             size="icon"
             onClick={() => skip(5)}
-            className="glass-button h-10 w-10"
+            className="h-10 w-10 backdrop-blur-xl bg-slate-800/50 border border-slate-700/50 hover:border-blue-500/30 hover:bg-slate-800/70 text-slate-300 hover:text-blue-400 transition-all duration-300 transform hover:scale-110 rounded-full"
           >
             <SkipForward className="w-5 h-5" />
           </Button>
@@ -236,7 +244,7 @@ export function WaveformPlayer({
             variant="ghost"
             size="sm"
             onClick={handlePlaybackRateChange}
-            className="glass-button text-xs font-mono min-w-[50px]"
+            className="text-xs font-mono min-w-[50px] backdrop-blur-xl bg-slate-800/50 border border-slate-700/50 hover:border-purple-500/30 hover:bg-slate-800/70 text-purple-400 hover:text-purple-300 transition-all duration-300 transform hover:scale-110 rounded-full"
           >
             {playbackRate}x
           </Button>
@@ -247,7 +255,7 @@ export function WaveformPlayer({
               variant="ghost"
               size="icon"
               onClick={toggleMute}
-              className="glass-button h-8 w-8"
+              className="h-8 w-8 backdrop-blur-xl bg-slate-800/50 border border-slate-700/50 hover:border-pink-500/30 hover:bg-slate-800/70 text-slate-300 hover:text-pink-400 transition-all duration-300 transform hover:scale-110 rounded-full"
             >
               {isMuted ? (
                 <VolumeX className="w-4 h-4" />
@@ -265,6 +273,8 @@ export function WaveformPlayer({
           </div>
         </div>
       </div>
+      <div className="absolute bottom-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-50" />
+    </div>
     </div>
   );
 }

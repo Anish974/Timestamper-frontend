@@ -8,6 +8,8 @@ interface User {
   email: string;
   fullName?: string;
   avatar_url?: string; // ✅ Matches your DB column
+  plan?: string; // Current subscription plan
+  exportsRemaining?: number; // Remaining exports for current period
 }
 
 export const useAuth = () => {
@@ -130,10 +132,11 @@ export const useAuth = () => {
         // ✅ Ensure subscription exists
         const { data: existingSub } = await supabaseClient
           .from('user_subscriptions')
-          .select('id')
+          .select('plan, exports_used, exports_limit')
           .eq('user_id', userId)
           .single();
 
+        let subscriptionData = existingSub;
         if (!existingSub) {
           await supabaseClient
             .from('user_subscriptions')
@@ -144,14 +147,22 @@ export const useAuth = () => {
               exports_used: 0,
               exports_limit: 3,
             });
+          
+          subscriptionData = {
+            plan: 'Free',
+            exports_used: 0,
+            exports_limit: 3,
+          };
         }
 
-        // ✅ FIXED: Map DB fields to frontend
+        // ✅ FIXED: Map DB fields to frontend INCLUDING subscription data
         setUser({
           id: userId,
           email: profile.email,
           fullName: profile.full_name,
           avatar_url: profile.avatar_url,
+          plan: subscriptionData?.plan || 'Free',
+          exportsRemaining: (subscriptionData?.exports_limit || 3) - (subscriptionData?.exports_used || 0),
         });
 
         toast.success('Welcome back!');
@@ -222,11 +233,32 @@ export const useAuth = () => {
                 .single();
 
               if (newProfile) {
+                // Ensure subscription exists for new profile
+                const { data: sub } = await supabaseClient
+                  .from('user_subscriptions')
+                  .select('plan, exports_used, exports_limit')
+                  .eq('user_id', userId)
+                  .single();
+
+                if (!sub) {
+                  await supabaseClient
+                    .from('user_subscriptions')
+                    .insert({
+                      user_id: userId,
+                      plan: 'Free',
+                      status: 'active',
+                      exports_used: 0,
+                      exports_limit: 3,
+                    });
+                }
+
                 setUser({
                   id: userId,
                   email: newProfile.email,
                   fullName: newProfile.full_name,
                   avatar_url: newProfile.avatar_url,
+                  plan: sub?.plan || 'Free',
+                  exportsRemaining: ((sub?.exports_limit || 3) - (sub?.exports_used || 0)),
                 });
               }
             } else {
@@ -239,11 +271,20 @@ export const useAuth = () => {
             await supabaseClient.auth.signOut();
           }
         } else if (profile) {
+          // Fetch subscription data
+          const { data: subscription } = await supabaseClient
+            .from('user_subscriptions')
+            .select('plan, exports_used, exports_limit')
+            .eq('user_id', userId)
+            .single();
+
           setUser({
             id: userId,
             email: profile.email,
             fullName: profile.full_name,
             avatar_url: profile.avatar_url,
+            plan: subscription?.plan || 'Free',
+            exportsRemaining: (subscription?.exports_limit || 3) - (subscription?.exports_used || 0),
           });
         }
       }

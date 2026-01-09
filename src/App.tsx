@@ -6,6 +6,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
+import Timestamper from "./pages/Timestamper";
 import Pricing from "./pages/Pricing";
 import LoginLogout from "./pages/LoginLogout";
 import NotFound from "./pages/NotFound";
@@ -28,6 +29,7 @@ const App = () => (
         <Routes>
           {/* Public */}
           <Route path="/" element={<Home />} />
+          <Route path="/timestamper" element={<Timestamper />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/anime-editor" element={<AnimeEditor />} />

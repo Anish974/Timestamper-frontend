@@ -162,10 +162,10 @@ export function ExportPanel({
             key={format.id}
             onClick={() => setSelectedFormat(format.id)}
             className={cn(
-              'flex flex-col items-center gap-1 p-3 rounded-xl transition-all duration-300',
-              'border hover:border-primary/50',
+              'flex flex-col items-center gap-1 p-3 rounded-xl transition-all duration-300 transform hover:scale-110',
+              'border hover:border-primary/50 hover:shadow-lg',
               selectedFormat === format.id
-                ? 'bg-primary/20 border-primary glow-effect'
+                ? 'bg-primary/20 border-primary glow-effect scale-105'
                 : 'bg-muted/30 border-border/50'
             )}
           >
@@ -192,8 +192,8 @@ export function ExportPanel({
           onClick={handleDownload}
           disabled={timestamps.length === 0 || loading}
           className={cn(
-            'flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
+            'flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300 transform hover:scale-105 hover:shadow-lg',
+            'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
           )}
         >
           <Download className="w-4 h-4 mr-2" />
@@ -203,7 +203,7 @@ export function ExportPanel({
           variant="outline"
           onClick={handleCopy}
           disabled={timestamps.length === 0}
-          className="glass-button px-6"
+          className="glass-button px-6 transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
         >
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
         </Button>

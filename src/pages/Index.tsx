@@ -150,38 +150,55 @@ const Index = () => {
   });
 
   return (
-    <div className="min-h-screen">
-      {/* Background effects */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Advanced Animated Background - Login style */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-accent/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-secondary/10 rounded-full blur-3xl" />
+        {/* Main gradient orbs with advanced animations */}
+        <div className="absolute top-1/4 -left-32 w-[500px] h-[500px] bg-gradient-to-br from-blue-500/30 via-cyan-500/20 to-blue-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute bottom-1/4 -right-32 w-[500px] h-[500px] bg-gradient-to-br from-pink-500/30 via-purple-500/20 to-pink-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-br from-purple-500/20 via-blue-500/10 to-cyan-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+        
+        {/* Floating particles effect */}
+        <div className="absolute top-20 left-20 w-2 h-2 bg-blue-400/40 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
+        <div className="absolute top-40 right-40 w-3 h-3 bg-pink-400/40 rounded-full animate-ping" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+        <div className="absolute bottom-32 left-1/3 w-2 h-2 bg-cyan-400/40 rounded-full animate-ping" style={{ animationDuration: '5s', animationDelay: '2s' }} />
+        <div className="absolute bottom-20 right-1/4 w-3 h-3 bg-purple-400/40 rounded-full animate-ping" style={{ animationDuration: '3.5s', animationDelay: '0.5s' }} />
+        
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
       </div>
 
       <div className="relative z-10 container max-w-4xl py-8 px-4 mt-24">
 
         {/* Header */}
         <header className="text-center mb-12 animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-500/10 via-pink-500/10 to-purple-500/10 border border-white/10 backdrop-blur-xl text-xs uppercase tracking-[0.25em] text-slate-300 font-semibold mb-6 shadow-lg">
+            <span className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></span>
+            Manual Timestamping Tool
+          </div>
           <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-effect">
-              <Music2 className="w-6 h-6 text-primary-foreground" />
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-pink-500 to-purple-500 rounded-2xl blur opacity-40 group-hover:opacity-60 transition-all duration-300"></div>
+              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-pink-500 flex items-center justify-center shadow-lg">
+                <Music2 className="w-6 h-6 text-white" />
+              </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
               TimeStamper
             </h1>
           </div>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-slate-400 text-lg mb-6">
             Flag important moments in your audio with visual precision
           </p>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShowShortcuts(true)}
-            className="mt-4 text-muted-foreground hover:text-foreground"
+            className="backdrop-blur-xl bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:border-blue-500/30 hover:text-white hover:bg-slate-800/70 transition-all duration-300 hover:scale-105"
           >
             <Keyboard className="w-4 h-4 mr-2" />
             Keyboard shortcuts
-            <kbd className="ml-2 px-1.5 py-0.5 rounded bg-muted text-xs font-mono">
+            <kbd className="ml-2 px-1.5 py-0.5 rounded bg-slate-700/50 text-xs font-mono border border-slate-600/50">
               ?
             </kbd>
           </Button>
@@ -229,15 +246,20 @@ const Index = () => {
                 className="md:col-span-2 animate-slide-up"
                 style={{ animationDelay: '300ms' }}
               >
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <span className="text-2xl">📍</span>
-                  Timestamps
-                  {timestamps.length > 0 && (
-                    <span className="text-sm text-muted-foreground">
-                      ({timestamps.length})
-                    </span>
-                  )}
-                </h2>
+                <div className="relative group mb-4">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-pink-500/20 rounded-2xl blur opacity-30"></div>
+                  <div className="relative backdrop-blur-xl bg-slate-900/50 border border-white/10 rounded-2xl px-6 py-3 flex items-center gap-3">
+                    <span className="text-2xl">📍</span>
+                    <h2 className="text-xl font-semibold bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">
+                      Timestamps
+                    </h2>
+                    {timestamps.length > 0 && (
+                      <span className="ml-auto px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-sm font-semibold">
+                        {timestamps.length}
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <TimestampList
                   timestamps={timestamps}
                   onSeek={handleSeek}
@@ -260,14 +282,19 @@ const Index = () => {
         )}
 
         {/* Help button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setShowShortcuts(true)}
-          className="fixed bottom-6 right-6 glass-card h-12 w-12 rounded-full"
-        >
-          <HelpCircle className="w-5 h-5" />
-        </Button>
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-pink-500 to-purple-500 rounded-full blur opacity-40 group-hover:opacity-70 transition-all duration-300"></div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowShortcuts(true)}
+              className="relative h-12 w-12 rounded-full backdrop-blur-2xl bg-slate-900/90 border border-white/10 hover:border-blue-500/50 hover:bg-slate-800/90 transition-all duration-300 hover:scale-110 shadow-xl"
+            >
+              <HelpCircle className="w-5 h-5 text-blue-400" />
+            </Button>
+          </div>
+        </div>
 
         {/* Keyboard shortcuts modal */}
         <KeyboardShortcutsModal
