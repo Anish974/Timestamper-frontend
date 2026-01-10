@@ -7,7 +7,7 @@ dist-ssr
 # backend/
 # server/
 # anime-backend/
-timestamper-backend/
+# timestamper-backend/
 
 # Video processing artifacts
 temp/
