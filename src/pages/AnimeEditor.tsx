@@ -35,15 +35,7 @@ export default function AnimeEditor() {
     const envUrl = envBase || legacy
     if (envUrl) return envUrl
 
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname
-      if (hostname.includes('timestamper.site') || hostname.includes('vercel.app')) {
-        return 'https://timestamper-backend-o44d.onrender.com'
-      }
-      return 'http://localhost:5000'
-    }
-
-    return 'http://localhost:5000'
+    return 'https://timestamper-backend.onrender.com'
   }
 
   const API_BASE_URL = useMemo(() => getApiUrl(), [])
