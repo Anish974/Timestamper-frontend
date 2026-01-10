@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       '/api': {
-        target: 'https://timestamper-backend.onrender.com',
+        target: 'https://timestamper-backend-o44d.onrender.com',
         changeOrigin: true,
         rewrite: (path) => path,
       }

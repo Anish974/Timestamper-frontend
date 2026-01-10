@@ -35,7 +35,7 @@ export default function AnimeEditor() {
     const envUrl = envBase || legacy
     if (envUrl) return envUrl
 
-    return 'https://timestamper-backend.onrender.com'
+    return 'https://timestamper-backend-o44d.onrender.com'
   }
 
   const API_BASE_URL = useMemo(() => getApiUrl(), [])
