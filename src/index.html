@@ -489,7 +489,7 @@
 
     async function loadData() {
         try {
-            const musicResponse = await fetch('http://localhost:3000/api/music-list');
+            const musicResponse = await fetch('https://timestamper-backend-o44d.onrender.com/api/music-list');
             const musicData = await musicResponse.json();
 
             if (musicData.success && musicData.music.length > 0) {
@@ -497,7 +497,7 @@
                     musicTracks[track.id] = {
                         name: track.displayName,
                         fileName: track.name,
-                        url: `http://localhost:3000${track.path}`,
+                        url: `https://timestamper-backend-o44d.onrender.com${track.path}`,
                         duration: null
                     };
                 });
@@ -511,7 +511,7 @@
                 showStatus('error', '⚠️ No music files found.');
             }
 
-            const videoResponse = await fetch('http://localhost:3000/api/videos');
+            const videoResponse = await fetch('https://timestamper-backend-o44d.onrender.com/api/videos');
             const videoData = await videoResponse.json();
 
             if (videoData.animes && videoData.animes.length > 0) {
@@ -834,7 +834,7 @@
                 timestampsJson: selectedMode === 'manual' ? customTimestamps : undefined
             };
 
-            const response = await fetch('http://localhost:3000/api/create-video', {
+            const response = await fetch('https://timestamper-backend-o44d.onrender.com/api/create-video', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -849,7 +849,7 @@
 
             const checkStatus = async () => {
                 attempts++;
-                const statusResponse = await fetch(`http://localhost:3000/api/status/${result.outputFileName}`);
+                const statusResponse = await fetch(`https://timestamper-backend-o44d.onrender.com/api/status/${result.outputFileName}`);
                 const statusData = await statusResponse.json();
 
                 if (statusData.ready) {
@@ -858,9 +858,9 @@
                     const previewDiv = document.getElementById('videoPreview');
                     if (previewDiv) {
                         previewDiv.innerHTML = `
-                            <video controls style="width:100%;max-width:600px;margin-top:20px;border-radius:8px;" src="http://localhost:3000/api/download/${result.outputFileName}"></video>
+                            <video controls style="width:100%;max-width:600px;margin-top:20px;border-radius:8px;" src="https://timestamper-backend-o44d.onrender.com/api/download/${result.outputFileName}"></video>
                             <br>
-                            <a href="http://localhost:3000/api/download/${result.outputFileName}" download class="btn-primary" style="margin-top:20px;display:inline-block;text-decoration:none;">⬇️ Download Video</a>
+                            <a href="https://timestamper-backend-o44d.onrender.com/api/download/${result.outputFileName}" download class="btn-primary" style="margin-top:20px;display:inline-block;text-decoration:none;">⬇️ Download Video</a>
                         `;
                     }
                 } else if (statusData.status === 'failed') {
