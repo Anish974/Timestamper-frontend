@@ -156,6 +156,7 @@ export default function AnimeEditor() {
       if (!musicResponse.ok) throw new Error(`Music API error: ${musicResponse.status}`)
 
       const musicData = await musicResponse.json()
+      console.log('🎵 Music API Response:', musicData)
 
       if (musicData.success && musicData.music?.length > 0) {
         const tracks: Record<string, any> = {}
@@ -168,8 +169,10 @@ export default function AnimeEditor() {
             duration: null,
           }
         })
+        console.log('🎵 Processed tracks:', tracks)
         setMusicTracks(tracks)
       } else {
+        console.log('⚠️ No music found in API response')
         showStatus('error', '⚠️ No music files found.')
       }
 
