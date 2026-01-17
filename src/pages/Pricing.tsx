@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { Check, Ticket } from 'lucide-react'
+import { Check, Ticket, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -95,7 +95,7 @@ export default function Pricing() {
         throw new Error(data.error || 'Verification failed')
       }
 
-      toast.success(`${data.plan} plan activated! 🎉`)
+      toast.success(`${data.plan} plan activated!`)
       navigate('/')
     } catch (e: any) {
       console.error('Payment verification error:', e)
@@ -138,7 +138,7 @@ export default function Pricing() {
           throw new Error(data.error || 'Failed to activate plan')
         }
 
-        toast.success(`${planName} plan activated! 🎉`)
+        toast.success(`${planName} plan activated!`)
         navigate('/')
         return
       } catch (e: any) {
@@ -280,8 +280,9 @@ export default function Pricing() {
           <div className="relative group mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-all duration-500" />
             <div className="relative rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 via-amber-500/5 to-yellow-500/10 backdrop-blur-xl p-6 text-center">
-              <p className="text-slate-300 mb-4 text-lg">
-                🔐 Please sign in to select a plan
+              <p className="text-slate-300 mb-4 text-lg flex items-center justify-center gap-2">
+                <Lock className="w-5 h-5" />
+                Please sign in to select a plan
               </p>
               <button
                 onClick={() => navigate('/login?plan=true')}

@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import ProcessingStatus from '../components/ProcessingStatus'
+import { Film, Sword, Theater, Ghost, Shield, Bomb, Star, Flame, Zap, Target, Upload, Lock, RotateCcw, FileText } from 'lucide-react'
 
 export default function AnimeEditor() {
   const { user } = useAuth()
   const [animeList, setAnimeList] = useState([])
+  const [videoList, setVideoList] = useState([])
   const [musicTracks, setMusicTracks] = useState<Record<string, any>>({})
   const [selectedMusic, setSelectedMusic] = useState<string | null>(null)
   const [selectedAnime, setSelectedAnime] = useState<string | null>(null)
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
   const [selectedMode, setSelectedMode] = useState('energy')
   const [customTimestamps, setCustomTimestamps] = useState<any>(null)
   const [startTime, setStartTime] = useState(0)
@@ -20,6 +24,7 @@ export default function AnimeEditor() {
   const [outputSize, setOutputSize] = useState('landscape')
   const [videoPreview, setVideoPreview] = useState<string | null>(null)
   const [waveformReady, setWaveformReady] = useState(false)
+  const [outputFileName, setOutputFileName] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -161,11 +166,11 @@ export default function AnimeEditor() {
       if (musicData.success && musicData.music?.length > 0) {
         const tracks: Record<string, any> = {}
         musicData.music.forEach((track: any) => {
-          const trackUrl = track.path || track.url
           tracks[track.id] = {
             name: track.displayName,
             fileName: track.name,
-            url: trackUrl,
+            url: track.url, // Direct Cloudinary URL for backend
+            proxyUrl: track.path, // Proxy URL for frontend playback
             duration: null,
           }
         })
@@ -173,11 +178,11 @@ export default function AnimeEditor() {
         setMusicTracks(tracks)
       } else {
         console.log('⚠️ No music found in API response')
-        showStatus('error', '⚠️ No music files found.')
+        showStatus('error', 'No music files found.')
       }
 
       const videoResponse = await fetch(`${API_BASE_URL}/api/videos`, {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(30000), // Increased to 30 seconds
       })
 
       if (!videoResponse.ok) throw new Error(`Video API error: ${videoResponse.status}`)
@@ -185,20 +190,55 @@ export default function AnimeEditor() {
       const videoData = await videoResponse.json()
 
       if (videoData.animes && videoData.animes.length > 0) {
-        const emojis = ['🎬', '⚔️', '🎭', '👹', '🦸', '💥', '🌟', '🔥', '⚡', '🎯']
+        const icons = [<Film />, <Sword />, <Theater />, <Ghost />, <Shield />, <Bomb />, <Star />, <Flame />, <Zap />, <Target />]
         const animes = videoData.animes.map((anime: any, index: number) => ({
           id: anime.id,
           name: anime.name,
           videoCount: anime.videoCount,
-          emoji: emojis[index % emojis.length],
+          icon: icons[index % icons.length],
         }))
         setAnimeList(animes)
       }
     } catch (err) {
       console.error('❌ Failed to load data:', err)
-      showStatus('error', `❌ Failed to load: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      showStatus('error', `Failed to load: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
+
+  async function loadVideosForAnime(animeId: string) {
+    if (!animeId) {
+      setVideoList([])
+      setSelectedVideo(null)
+      return
+    }
+
+    try {
+      console.log('🎬 Fetching videos for anime:', animeId)
+      const response = await fetch(`${API_BASE_URL}/api/videos/${animeId}`, {
+        signal: AbortSignal.timeout(10000),
+      })
+
+      if (!response.ok) throw new Error(`Video fetch error: ${response.status}`)
+
+      const data = await response.json()
+      console.log('🎬 Videos response:', data)
+
+      if (data.videos && data.videos.length > 0) {
+        setVideoList(data.videos)
+      } else {
+        setVideoList([])
+        showStatus('error', 'No videos found for this anime.')
+      }
+    } catch (err) {
+      console.error('❌ Failed to load videos:', err)
+      showStatus('error', `Failed to load videos: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setVideoList([])
+    }
+  }
+
+  useEffect(() => {
+    loadVideosForAnime(selectedAnime)
+  }, [selectedAnime])
 
   function showStatus(type: string, message: string) {
     setStatusMsg({ type, message })
@@ -490,7 +530,7 @@ export default function AnimeEditor() {
       const track = musicTracks[selectedMusic]
 
       const payload = {
-        musicPath: track.fileName,
+        musicPath: track.url, // Use Cloudinary URL instead of filename
         animeSelection: selectedAnime,
         startTime,
         endTime,
@@ -513,53 +553,14 @@ export default function AnimeEditor() {
       }
 
       const result = await response.json()
-
-      let attempts = 0
-      const maxAttempts = 60
-
-      const checkStatus = async () => {
-        attempts++
-        const statusResponse = await fetch(`${API_BASE_URL}/api/status/${result.outputFileName}`)
-
-        if (!statusResponse.ok) {
-          throw new Error(`Status check failed: ${statusResponse.status}`)
-        }
-
-        const statusData = await statusResponse.json()
-
-        if (statusData.ready) {
-          setLoading(false)
-          showStatus('success', '✅ Video created successfully!')
-          // Use actualFileName if available (for cropped videos)
-          const finalFileName = statusData.actualFileName || result.outputFileName
-          setVideoPreview(finalFileName)
-        } else if (statusData.status === 'failed') {
-          setLoading(false)
-          showStatus('error', `❌ Failed: ${statusData.error}`)
-        } else if (attempts >= maxAttempts) {
-          setLoading(false)
-          showStatus('error', '❌ Timeout')
-        } else {
-          setTimeout(checkStatus, 2000)
-        }
-      }
-
-      setTimeout(checkStatus, 3000)
-      simulateProgress()
+      setOutputFileName(result.outputFileName)
+      setLoading(false)
+      showStatus('success', '🎬 Video processing started! Check progress below.')
+      // ProcessingStatus component will handle polling and updates
     } catch (err: any) {
       setLoading(false)
       showStatus('error', `❌ Error: ${err.message}`)
     }
-  }
-
-  function simulateProgress() {
-    let prog = 0
-    const interval = setInterval(() => {
-      prog += Math.random() * 35
-      if (prog >= 100) prog = 100
-      setProgress(prog)
-      if (prog === 100) clearInterval(interval)
-    }, 600)
   }
 
   const handleTimestampUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -674,8 +675,9 @@ export default function AnimeEditor() {
                           if (!rect) return
                           const x = e.clientX - rect.left
                           const newTime = (x / rect.width) * track.duration
-                          if (audioRef.current) {
+                          if (newTime >= startTime && newTime <= endTime && audioRef.current) {
                             audioRef.current.currentTime = newTime
+                            setCurrentTime(newTime)
                           }
                         }}
                       />
@@ -753,11 +755,32 @@ export default function AnimeEditor() {
                       : 'border-slate-600/50 bg-slate-800/30 hover:border-pink-500/50 hover:bg-slate-800/50'
                     }`}
                   >
-                    <div className="text-3xl mb-1.5">{anime.emoji}</div>
+                    <div className="w-8 h-8 mb-1.5 text-white">{anime.icon}</div>
                     <div className="font-semibold text-xs text-slate-300">{anime.name}</div>
                   </button>
                 ))}
               </div>
+
+              {/* Video/Episode Selection */}
+              {selectedAnime && videoList.length > 0 && (
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Select Episode
+                  </label>
+                  <select
+                    value={selectedVideo || ''}
+                    onChange={(e) => setSelectedVideo(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-600/50 bg-slate-800/50 rounded-xl text-white text-sm focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition"
+                  >
+                    <option value="">Choose an episode...</option>
+                    {videoList.map((video: any) => (
+                      <option key={video.id} value={video.id}>
+                        {video.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 
@@ -775,8 +798,8 @@ export default function AnimeEditor() {
               </div>
               <div className="grid grid-cols-1 gap-3 mb-4">
                 {[
-                  { id: 'manual', emoji: '📝', name: 'Manual', desc: 'Upload JSON timestamps' },
-                  { id: 'energy', emoji: '⚡', name: 'Auto Detect', desc: 'AI-powered detection' },
+                  { id: 'manual', icon: <FileText />, name: 'Manual', desc: 'Upload JSON timestamps' },
+                  { id: 'energy', icon: <Zap />, name: 'Auto Detect', desc: 'AI-powered detection' },
                 ].map((mode) => (
                   <button
                     key={mode.id}
@@ -788,7 +811,7 @@ export default function AnimeEditor() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="text-2xl">{mode.emoji}</div>
+                      <div className="w-6 h-6 text-white">{mode.icon}</div>
                       <div>
                         <div className="font-semibold text-sm text-slate-300">{mode.name}</div>
                         <div className="text-xs text-slate-400">{mode.desc}</div>
@@ -802,7 +825,7 @@ export default function AnimeEditor() {
                 <div>
                   <label className="block px-4 py-3 bg-slate-800/50 rounded-xl border border-dashed border-slate-600/50 text-center cursor-pointer hover:border-purple-500 hover:bg-slate-800/70 transition">
                     <span className="text-sm text-slate-300 flex items-center justify-center gap-2">
-                      <span>📤</span>
+                      <Upload className="w-4 h-4" />
                       <span>Upload JSON</span>
                     </span>
                     <input
@@ -851,17 +874,19 @@ export default function AnimeEditor() {
           <div className="relative backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border border-white/10 rounded-2xl p-6">
           {!user && (
             <div className="mb-4 backdrop-blur-xl bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-center">
-              <p className="text-yellow-400 font-semibold text-sm">
-                🔒 Please login to create videos
+              <p className="text-yellow-400 font-semibold text-sm flex items-center justify-center gap-2">
+                <Lock className="w-4 h-4" />
+                Please login to create videos
               </p>
             </div>
           )}
           <div className="flex gap-4 flex-wrap justify-center">
             <button
               onClick={handleResetForm}
-              className="px-6 py-2.5 bg-slate-700/80 text-slate-200 rounded-xl hover:bg-slate-600 transition-all duration-300 transform hover:scale-105 font-semibold text-sm"
+              className="px-6 py-2.5 bg-slate-700/80 text-slate-200 rounded-xl hover:bg-slate-600 transition-all duration-300 transform hover:scale-105 font-semibold text-sm flex items-center gap-2"
             >
-              🔄 Reset
+              <RotateCcw className="w-4 h-4" />
+              Reset
             </button>
             <button
               onClick={handleDownloadClick}
@@ -901,6 +926,19 @@ export default function AnimeEditor() {
             }`}
           >
             {statusMsg.message}
+          </div>
+        )}
+
+        {/* PROCESSING STATUS */}
+        {outputFileName && (
+          <div className="flex justify-center">
+            <ProcessingStatus 
+              outputFileName={outputFileName} 
+              onReady={(fileName) => {
+                setVideoPreview(fileName);
+                showStatus('success', '✅ Video created successfully!');
+              }}
+            />
           </div>
         )}
 

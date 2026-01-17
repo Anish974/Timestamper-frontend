@@ -515,7 +515,7 @@
             const videoData = await videoResponse.json();
 
             if (videoData.animes && videoData.animes.length > 0) {
-                const emojis = ['🎬', '⚔️', '🎭', '👹', '🦸', '💥', '🌟', '🔥', '⚡', '🎯'];
+                const emojis = ['�', '⚔️', '🎭', '👻', '🛡️', '💣', '⭐', '🔥', '⚡', '🎯'];
                 animeList = videoData.animes.map((anime, index) => ({
                     id: anime.id,
                     name: anime.name,
@@ -595,7 +595,7 @@
         };
 
         const modes = [
-            { id: 'manual', emoji: '📝', name: 'Manual Timestamp', desc: 'Upload your own JSON timestamps for scene changes.' },
+            { id: 'manual', emoji: '✏️', name: 'Manual Timestamp', desc: 'Upload your own JSON timestamps for scene changes.' },
             { id: 'energy', emoji: '⚡', name: 'Energy Based', desc: 'Scene changes based on audio energy/loudness.' }
         ];
 

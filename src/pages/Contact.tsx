@@ -1,5 +1,5 @@
 import { useState, ChangeEvent, FormEvent } from 'react'
-import { Mail, Globe2, Send, MessageSquare } from 'lucide-react'
+import { Mail, Globe2, Send, MessageSquare, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -127,7 +127,7 @@ export default function Contact() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <label htmlFor="name" className="block text-sm font-medium text-slate-300 flex items-center gap-2">
-                      <span className="text-blue-400">👤</span> Your Name
+                      <User className="w-4 h-4 text-blue-400" /> Your Name
                     </label>
                     <Input
                       id="name"
@@ -142,7 +142,7 @@ export default function Contact() {
 
                   <div className="space-y-2">
                     <label htmlFor="email" className="block text-sm font-medium text-slate-300 flex items-center gap-2">
-                      <span className="text-emerald-400">📧</span> Email Address
+                      <Mail className="w-4 h-4 text-emerald-400" /> Email Address
                     </label>
                     <Input
                       id="email"
@@ -158,7 +158,7 @@ export default function Contact() {
 
                   <div className="space-y-2">
                     <label htmlFor="message" className="block text-sm font-medium text-slate-300 flex items-center gap-2">
-                      <span className="text-purple-400">✉️</span> Your Message
+                      <MessageSquare className="w-4 h-4 text-purple-400" /> Your Message
                     </label>
                     <Textarea
                       id="message"

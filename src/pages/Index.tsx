@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Music2, Keyboard, HelpCircle } from 'lucide-react';
+import { Music2, Keyboard, HelpCircle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AudioUpload } from '@/components/timestamper/AudioUpload';
 import { WaveformPlayer } from '@/components/timestamper/WaveformPlayer';
@@ -249,7 +249,7 @@ const Index = () => {
                 <div className="relative group mb-4">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-pink-500/20 rounded-2xl blur opacity-30"></div>
                   <div className="relative backdrop-blur-xl bg-slate-900/50 border border-white/10 rounded-2xl px-6 py-3 flex items-center gap-3">
-                    <span className="text-2xl">📍</span>
+                    <MapPin className="w-6 h-6" />
                     <h2 className="text-xl font-semibold bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">
                       Timestamps
                     </h2>

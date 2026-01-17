@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import WaveSurfer from 'wavesurfer.js'
-import { Music2, Keyboard, HelpCircle, Film } from 'lucide-react'
+import { Music2, Keyboard, HelpCircle, Film, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AudioUpload } from '@/components/timestamper/AudioUpload'
 import { WaveformPlayer } from '@/components/timestamper/WaveformPlayer'
@@ -397,7 +397,7 @@ const Home = () => {
                 style={{ animationDelay: '300ms' }}
               >
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-white">
-                  <span className="text-2xl">📍</span>
+                  <MapPin className="w-6 h-6" />
                   Timestamps
                   {timestamps.length > 0 && (
                     <span className="text-sm text-slate-400">({timestamps.length})</span>

@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Play, Clock, Sparkles, Zap, Music, Video, ArrowRight, Check } from 'lucide-react';
+import { Play, Clock, Sparkles, Zap, Music, Video, ArrowRight, Check, Rocket } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -53,7 +53,7 @@ export default function Home() {
           <div className="relative group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-cyan-500/10 border border-cyan-500/30 rounded-full mb-12 backdrop-blur-xl shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '200ms' }}>
             <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
             <Sparkles className="relative w-5 h-5 text-cyan-400 animate-pulse" />
-            <span className="relative text-base text-cyan-300 font-semibold">AI-Powered Auto-Detection Coming Soon! 🚀</span>
+            <span className="relative text-base text-cyan-300 font-semibold flex items-center gap-1">AI-Powered Auto-Detection Coming Soon! <Rocket className="w-4 h-4" /></span>
           </div>
 
           {/* CTA Buttons */}

@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { User } from 'lucide-react'
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -107,7 +108,7 @@ export default function AuthForm() {
         {mode === 'signup' && (
           <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
             <Label htmlFor="name" className="text-slate-300 font-medium flex items-center gap-2">
-              <span className="text-blue-400">👤</span> Name
+              <User className="w-4 h-4 text-blue-400" /> Name
             </Label>
             <Input
               id="name"
